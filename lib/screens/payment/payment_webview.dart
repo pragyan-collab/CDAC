@@ -124,7 +124,7 @@ class _PaymentWebviewState extends State<PaymentWebview> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const HeaderWidget(title: 'Secure Payment', showBackButton: true),
+      appBar: const HeaderWidget(showBackButton: true),
       body: Stack(
         children: [
           WebViewWidget(controller: _controller),

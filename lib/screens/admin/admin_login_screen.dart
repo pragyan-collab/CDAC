@@ -52,7 +52,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const HeaderWidget(title: 'Admin Login', showBackButton: true),
+      appBar: const HeaderWidget(showBackButton: true),
       body: _isLoading
           ? const LoadingWidget(message: 'Authenticating...')
           : SafeArea(

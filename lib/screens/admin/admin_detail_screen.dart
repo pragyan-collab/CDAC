@@ -51,7 +51,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const HeaderWidget(title: 'Application Details', showBackButton: true),
+      appBar: const HeaderWidget(showBackButton: true),
       body: _isProcessing
           ? const Center(
         child: CircularProgressIndicator(

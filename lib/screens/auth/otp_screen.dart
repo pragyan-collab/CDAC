@@ -93,7 +93,7 @@ class _OTPScreenState extends State<OTPScreen> {
     final aadhaar = args?['aadhaar'] ?? '';
 
     return Scaffold(
-      appBar: const HeaderWidget(title: 'Verify OTP', showBackButton: true),
+      appBar: const HeaderWidget(showBackButton: true),
       body: _isLoading
           ? const LoadingWidget(message: 'Verifying OTP...')
           : SafeArea(

@@ -39,7 +39,7 @@ class _SchemesScreenState extends State<SchemesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const HeaderWidget(title: 'Government Schemes', showBackButton: false),
+      appBar: const HeaderWidget(showBackButton: false),
       body: Column(
         children: [
           // Search Bar

@@ -28,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const HeaderWidget(title: 'Home', showBackButton: false),
+      appBar: const HeaderWidget(showBackButton: false),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppConstants.screenPadding),
         child: Column(

@@ -72,7 +72,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
     final categories = ['All', ...allServices.map((s) => s['category'] as String).toSet()];
 
     return Scaffold(
-      appBar: const HeaderWidget(title: 'Services', showBackButton: false),
+      appBar: const HeaderWidget(showBackButton: false),
       body: Column(
         children: [
           // Search Bar

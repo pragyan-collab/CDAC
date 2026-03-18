@@ -144,7 +144,7 @@ class _UploadScreenState extends State<UploadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const HeaderWidget(title: 'Upload Documents', showBackButton: true),
+      appBar: const HeaderWidget(showBackButton: true),
       body: _isUploading
           ? Center(
         child: Column(

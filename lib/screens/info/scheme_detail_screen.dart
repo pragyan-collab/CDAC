@@ -13,7 +13,7 @@ class SchemeDetailScreen extends StatelessWidget {
     final scheme = args['scheme'] as SchemeModel;
 
     return Scaffold(
-      appBar: const HeaderWidget(title: 'Scheme Details', showBackButton: true),
+      appBar: const HeaderWidget(showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

@@ -132,7 +132,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const HeaderWidget(title: 'Payment', showBackButton: true),
+      appBar: const HeaderWidget(showBackButton: true),
       body: _isProcessing
           ? Center(
         child: Column(

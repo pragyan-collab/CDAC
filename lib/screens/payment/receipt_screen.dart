@@ -16,7 +16,7 @@ class ReceiptScreen extends StatelessWidget {
     final paymentDate = DateTime.now();
 
     return Scaffold(
-      appBar: const HeaderWidget(title: 'Payment Receipt', showBackButton: false),
+      appBar: const HeaderWidget(showBackButton: false),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppConstants.screenPadding),
         child: Column(

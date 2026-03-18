@@ -1,73 +1,85 @@
+// lib/widgets/header_widget.dart
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 
 class HeaderWidget extends StatelessWidget implements PreferredSizeWidget {
-  final String title;
   final bool showBackButton;
-  final List<Widget>? actions;
+  final VoidCallback? onBackPressed;
 
   const HeaderWidget({
     Key? key,
-    required this.title,
     this.showBackButton = false,
-    this.actions,
+    this.onBackPressed,
   }) : super(key: key);
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(100);
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      backgroundColor: AppConstants.white,
-      elevation: 2,
-      shadowColor: AppConstants.primaryBlueDark.withOpacity(0.1),
-      leading: showBackButton
-          ? IconButton(
-        icon: const Icon(Icons.arrow_back, color: AppConstants.primaryBlue),
-        onPressed: () => Navigator.pop(context),
-      )
-          : Row(
-        children: [
-          const SizedBox(width: 8),
-          Image.asset(
-            'assets/images/emblem.png',
-            height: 32,
-            width: 32,
-          ),
-        ],
-      ),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: AppConstants.primaryBlue,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            AppStrings.tagline,
-            style: const TextStyle(
-              color: AppConstants.textMedium,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        ...?actions,
-        Padding(
-          padding: const EdgeInsets.only(right: 8.0),
-          child: Image.asset(
-            'assets/images/logo.png',
-            height: 40,
-            width: 40,
+    final padding = MediaQuery.of(context).padding.top;
+
+    return Container(
+      color: AppConstants.white,
+      child: Padding(
+        padding: EdgeInsets.only(top: padding),
+        child: Container(
+          height: 100 - padding,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Left side - Emblem (Larger)
+              Container(
+                width: 100,
+                height: 85,
+                child: Image.asset(
+                  'assets/images/emblem.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey[200],
+                      child: const Icon(Icons.broken_image, color: Colors.grey),
+                    );
+                  },
+                ),
+              ),
+
+              // Right side - Back button (if needed) and Logo
+              Row(
+                children: [
+                  if (showBackButton) ...[
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios, color: AppConstants.primaryBlue, size: 24),
+                      onPressed: onBackPressed ?? () => Navigator.pop(context),
+                    ),
+                  ],
+                  // Logo (Larger)
+                  Container(
+                    width: 100,
+                    height: 45,
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[200],
+                          child: const Center(
+                            child: Text(
+                              'Logo',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }

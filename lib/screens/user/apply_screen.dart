@@ -113,7 +113,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
     }
 
     return Scaffold(
-      appBar: const HeaderWidget(title: 'Apply for Service', showBackButton: true),
+      appBar: const HeaderWidget(showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppConstants.screenPadding),
         child: Form(

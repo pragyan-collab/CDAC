@@ -83,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const HeaderWidget(title: 'Login', showBackButton: false),
+      appBar: const HeaderWidget(showBackButton: false),
       body: _isLoading
           ? const LoadingWidget(message: 'Sending OTP...')
           : SafeArea(
