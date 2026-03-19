@@ -1,8 +1,11 @@
+// lib/screens/payment/payment_screen.dart
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
+import '../../utils/argument_helper.dart';
 import '../../widgets/header_widget.dart';
 import '../../services/payment_service.dart';
+import '../../widgets/safe_navigation.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({Key? key}) : super(key: key);
@@ -12,7 +15,7 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  String? selectedMethod;
+  String selectedMethod = 'upi'; // ✅ default selected
   bool _isProcessing = false;
 
   double amount = 0.0;
@@ -46,87 +49,119 @@ class _PaymentScreenState extends State<PaymentScreen> {
     },
   ];
 
+  bool _argsLoaded = false;
+
   @override
-  void initState() {
-    super.initState();
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
-    amount = args['amount'] ?? 0.0;
-    serviceName = args['serviceName'] ?? 'Service';
-    applicationId = args['applicationId'] ?? '';
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_argsLoaded) {
+      _argsLoaded = true;
+      _getArguments();
+    }
+  }
+
+  void _getArguments() {
+    try {
+      final args = ArgumentHelper.getArgument<Map>(
+        context,
+        routeName: AppRoutes.payment,
+      );
+
+      if (args != null) {
+        amount = (args['amount'] ?? 0.0).toDouble();
+        serviceName = args['serviceName'] ?? 'Service';
+        applicationId = args['applicationId'] ?? '';
+      }
+    } catch (e) {
+      debugPrint('Argument error: $e');
+    }
   }
 
   Future<void> _processPayment() async {
-    if (selectedMethod == null) {
+    if (_isProcessing) return; // ✅ prevent double click
+
+    if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select a payment method'),
+          content: Text('Invalid payment amount'),
           backgroundColor: AppConstants.errorRed,
         ),
       );
       return;
     }
 
-    setState(() {
-      _isProcessing = true;
-    });
+    setState(() => _isProcessing = true);
 
-    // For UPI, navigate to webview
-    if (selectedMethod == 'upi') {
-      final paymentLink = await PaymentService().initiatePayment(amount, applicationId);
+    try {
+      if (selectedMethod == 'upi') {
+        final paymentLink =
+        await PaymentService().initiatePayment(amount, applicationId);
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      setState(() {
-        _isProcessing = false;
-      });
+        setState(() => _isProcessing = false);
 
-      Navigator.pushNamed(
-        context,
-        AppRoutes.paymentWebview,
-        arguments: {
-          'paymentLink': paymentLink,
-          'amount': amount,
-          'applicationId': applicationId,
-        },
-      );
-    } else {
-      // Simulate payment for other methods
-      await Future.delayed(const Duration(seconds: 2));
-
-      final success = await PaymentService().verifyPayment('dummy_payment_id');
-
-      if (!mounted) return;
-
-      setState(() {
-        _isProcessing = false;
-      });
-
-      if (success) {
-        final receiptId = await PaymentService().generateReceipt(
-          'dummy_payment_id',
-          amount,
-          applicationId,
-        );
-
-        Navigator.pushReplacementNamed(
-          context,
-          AppRoutes.receipt,
+        SafeNavigation.navigateTo(
+          AppRoutes.paymentWebview,
           arguments: {
-            'receiptId': receiptId,
+            'paymentLink': paymentLink,
             'amount': amount,
-            'serviceName': serviceName,
             'applicationId': applicationId,
           },
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Payment failed. Please try again.'),
-            backgroundColor: AppConstants.errorRed,
-          ),
-        );
+        // Simulate processing
+        await Future.delayed(const Duration(seconds: 2));
+
+        final success =
+        await PaymentService().verifyPayment('dummy_payment_id');
+
+        if (!mounted) return;
+
+        setState(() => _isProcessing = false);
+
+        if (success) {
+          final receiptId = await PaymentService().generateReceipt(
+            'dummy_payment_id',
+            amount,
+            applicationId,
+          );
+
+          SafeNavigation.navigateReplacementTo(
+            AppRoutes.receipt,
+            arguments: {
+              'receiptId': receiptId,
+              'amount': amount,
+              'serviceName': serviceName,
+              'applicationId': applicationId,
+            },
+          );
+        } else {
+          _showError('Payment failed. Please try again.');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        _showError('Error: $e');
       }
     }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppConstants.errorRed,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    ArgumentHelper.clearArguments(AppRoutes.payment);
+    super.dispose();
   }
 
   @override
@@ -134,14 +169,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return Scaffold(
       appBar: const HeaderWidget(showBackButton: true),
       body: _isProcessing
-          ? Center(
+          ? const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppConstants.primaryBlue),
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                  AppConstants.primaryBlue),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               'Processing payment...',
               style: TextStyle(
@@ -153,18 +189,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ),
       )
           : SingleChildScrollView(
-        padding: const EdgeInsets.all(AppConstants.screenPadding),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Amount Card
+            // 💳 Amount Card
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppConstants.primaryBlue, AppConstants.primaryBlueDark],
+                gradient: const LinearGradient(
+                  colors: [
+                    AppConstants.primaryBlue,
+                    AppConstants.primaryBlueDark
+                  ],
                 ),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: AppConstants.buttonShadow,
               ),
               child: Column(
@@ -173,7 +212,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     'Total Amount',
                     style: TextStyle(
                       color: AppConstants.white,
-                      fontSize: 14,
+                      fontSize: 16,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -181,7 +220,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     '₹${amount.toStringAsFixed(2)}',
                     style: const TextStyle(
                       color: AppConstants.white,
-                      fontSize: 36,
+                      fontSize: 40,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -190,35 +229,38 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     'For: $serviceName',
                     style: const TextStyle(
                       color: AppConstants.white,
-                      fontSize: 14,
+                      fontSize: 16,
                     ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 30),
 
-            // Payment Methods
             const Text(
               'Select Payment Method',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppConstants.textDark,
               ),
             ),
-            const SizedBox(height: 16),
 
+            const SizedBox(height: 20),
+
+            // 💳 Payment Methods
             ...paymentMethods.map((method) {
               final isSelected = selectedMethod == method['id'];
+
               return GestureDetector(
                 onTap: () {
                   setState(() {
                     selectedMethod = method['id'];
                   });
                 },
-                child: Container(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -227,10 +269,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     border: Border.all(
                       color: isSelected
                           ? AppConstants.primaryBlue
-                          : Colors.transparent,
-                      width: 2,
+                          : Colors.grey.shade300,
+                      width: isSelected ? 2 : 1,
                     ),
-                    boxShadow: AppConstants.buttonShadow,
+                    boxShadow:
+                    isSelected ? AppConstants.buttonShadow : null,
                   ),
                   child: Row(
                     children: [
@@ -243,7 +286,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         child: Icon(
                           method['icon'],
                           color: method['color'],
-                          size: 24,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -253,61 +295,64 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
-                            color: AppConstants.textDark,
                           ),
                         ),
                       ),
                       if (isSelected)
-                        const Icon(
-                          Icons.check_circle,
-                          color: AppConstants.primaryBlue,
-                        ),
+                        const Icon(Icons.check_circle,
+                            color: AppConstants.primaryBlue),
                     ],
                   ),
                 ),
               );
             }).toList(),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-            // Security Note
+            // 🔐 Security Note
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppConstants.primaryBlue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                color:
+                AppConstants.primaryBlue.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
-                children: const [
-                  Icon(Icons.lock, color: AppConstants.primaryBlue, size: 20),
+              child: const Row(
+                children: [
+                  Icon(Icons.lock,
+                      color: AppConstants.primaryBlue),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Your payment is secure and encrypted',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppConstants.textMedium,
-                      ),
                     ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 30),
 
-            // Pay Button
+            // ✅ Pay Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _processPayment,
+                onPressed: _isProcessing ? null : _processPayment,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppConstants.successGreen,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding:
+                  const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                    BorderRadius.circular(12),
+                  ),
                 ),
                 child: Text(
                   'Pay ₹${amount.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),

@@ -12,9 +12,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  # For OTP fields
-  pin_code_fields: ^8.0.1
-
   # For document picking
   image_picker: ^1.0.4
 
@@ -23,6 +20,9 @@ dependencies:
 
   # For local storage
   shared_preferences: ^2.2.2
+
+  # For secure storage (tokens, sensitive data)
+  flutter_secure_storage: ^9.2.2
 
   # For URL launching
   url_launcher: ^6.2.1

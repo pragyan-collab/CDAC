@@ -1,8 +1,11 @@
+// lib/screens/user/apply_screen.dart
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
+import '../../utils/argument_helper.dart';
 import '../../widgets/header_widget.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/safe_navigation.dart';
 
 class ApplyScreen extends StatefulWidget {
   const ApplyScreen({Key? key}) : super(key: key);
@@ -38,10 +41,34 @@ class _ApplyScreenState extends State<ApplyScreen> {
     'Ration Card',
   ];
 
+  bool _argsLoaded = false;
+
   @override
   void initState() {
     super.initState();
-    // Pre-fill user data
+    _prefillUserData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_argsLoaded) {
+      _argsLoaded = true;
+      _getArguments();
+    }
+  }
+
+  void _getArguments() {
+    final args = ArgumentHelper.getArgument<Map>(
+      context,
+      routeName: AppRoutes.apply,
+    );
+    if (args != null && args.containsKey('service')) {
+      selectedService = args['service'] as String?;
+    }
+  }
+
+  void _prefillUserData() {
     final user = AuthService().currentUser;
     _nameController.text = user?.name ?? '';
     _emailController.text = user?.email ?? '';
@@ -66,7 +93,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
       },
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         _dobController.text = "${picked.day}/${picked.month}/${picked.year}";
       });
@@ -85,9 +112,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
         return;
       }
 
-      // Navigate to upload screen
-      Navigator.pushNamed(
-        context,
+      SafeNavigation.navigateTo(
         AppRoutes.upload,
         arguments: {
           'service': selectedService,
@@ -106,27 +131,33 @@ class _ApplyScreenState extends State<ApplyScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map?;
-    if (args != null && args.containsKey('service')) {
-      selectedService = args['service'];
-    }
+  void dispose() {
+    ArgumentHelper.clearArguments(AppRoutes.apply);
+    _nameController.dispose();
+    _fatherNameController.dispose();
+    _dobController.dispose();
+    _addressController.dispose();
+    _mobileController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: const HeaderWidget(showBackButton: true),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppConstants.screenPadding),
+        padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Service Selection
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: AppConstants.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: AppConstants.buttonShadow,
                 ),
                 child: Column(
@@ -135,19 +166,19 @@ class _ApplyScreenState extends State<ApplyScreen> {
                     const Text(
                       'Select Service',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: AppConstants.textDark,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       value: selectedService,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
                       hint: const Text('Choose a service'),
                       items: services.map((service) {
@@ -172,14 +203,13 @@ class _ApplyScreenState extends State<ApplyScreen> {
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // Personal Information
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: AppConstants.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: AppConstants.buttonShadow,
                 ),
                 child: Column(
@@ -188,19 +218,19 @@ class _ApplyScreenState extends State<ApplyScreen> {
                     const Text(
                       'Personal Information',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: AppConstants.textDark,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    // Name
                     TextFormField(
                       controller: _nameController,
                       decoration: const InputDecoration(
                         labelText: 'Full Name',
                         prefixIcon: Icon(Icons.person),
+                        border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -209,14 +239,14 @@ class _ApplyScreenState extends State<ApplyScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
-                    // Father's Name
                     TextFormField(
                       controller: _fatherNameController,
                       decoration: const InputDecoration(
                         labelText: 'Father\'s Name',
                         prefixIcon: Icon(Icons.person_outline),
+                        border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -225,9 +255,8 @@ class _ApplyScreenState extends State<ApplyScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
-                    // Date of Birth
                     TextFormField(
                       controller: _dobController,
                       readOnly: true,
@@ -235,6 +264,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Date of Birth',
                         prefixIcon: Icon(Icons.calendar_today),
+                        border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -243,13 +273,13 @@ class _ApplyScreenState extends State<ApplyScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
-                    // Gender
                     const Text(
                       'Gender',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
                         color: AppConstants.textDark,
                       ),
                     ),
@@ -267,6 +297,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                               });
                             },
                             activeColor: AppConstants.primaryBlue,
+                            contentPadding: EdgeInsets.zero,
                           ),
                         ),
                         Expanded(
@@ -280,6 +311,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                               });
                             },
                             activeColor: AppConstants.primaryBlue,
+                            contentPadding: EdgeInsets.zero,
                           ),
                         ),
                         Expanded(
@@ -293,6 +325,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                               });
                             },
                             activeColor: AppConstants.primaryBlue,
+                            contentPadding: EdgeInsets.zero,
                           ),
                         ),
                       ],
@@ -301,14 +334,13 @@ class _ApplyScreenState extends State<ApplyScreen> {
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // Address & Contact
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: AppConstants.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: AppConstants.buttonShadow,
                 ),
                 child: Column(
@@ -317,20 +349,21 @@ class _ApplyScreenState extends State<ApplyScreen> {
                     const Text(
                       'Address & Contact',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: AppConstants.textDark,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    // Address
                     TextFormField(
                       controller: _addressController,
                       maxLines: 3,
                       decoration: const InputDecoration(
                         labelText: 'Residential Address',
                         prefixIcon: Icon(Icons.location_on),
+                        border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -339,15 +372,16 @@ class _ApplyScreenState extends State<ApplyScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
-                    // Mobile
                     TextFormField(
                       controller: _mobileController,
                       keyboardType: TextInputType.phone,
+                      maxLength: 10,
                       decoration: const InputDecoration(
                         labelText: 'Mobile Number',
                         prefixIcon: Icon(Icons.phone),
+                        border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -359,21 +393,21 @@ class _ApplyScreenState extends State<ApplyScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
-                    // Email
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: const InputDecoration(
                         labelText: 'Email Address',
                         prefixIcon: Icon(Icons.email),
+                        border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter email';
                         }
-                        if (!value.contains('@')) {
+                        if (!value.contains('@') || !value.contains('.')) {
                           return 'Enter valid email';
                         }
                         return null;
@@ -383,39 +417,34 @@ class _ApplyScreenState extends State<ApplyScreen> {
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // Terms and Conditions
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: AppConstants.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: AppConstants.buttonShadow,
                 ),
-                child: Column(
-                  children: [
-                    CheckboxListTile(
-                      title: const Text(
-                        'I confirm that the information provided is true and correct',
-                        style: TextStyle(fontSize: 14),
-                      ),
-                      value: _agreeToTerms,
-                      onChanged: (value) {
-                        setState(() {
-                          _agreeToTerms = value ?? false;
-                        });
-                      },
-                      activeColor: AppConstants.primaryBlue,
-                      controlAffinity: ListTileControlAffinity.leading,
-                    ),
-                  ],
+                child: CheckboxListTile(
+                  title: const Text(
+                    'I confirm that the information provided is true and correct',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  value: _agreeToTerms,
+                  onChanged: (value) {
+                    setState(() {
+                      _agreeToTerms = value ?? false;
+                    });
+                  },
+                  activeColor: AppConstants.primaryBlue,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 30),
 
-              // Submit Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -423,6 +452,9 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppConstants.successGreen,
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: const Text(
                     'Next: Upload Documents',
@@ -435,16 +467,5 @@ class _ApplyScreenState extends State<ApplyScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _fatherNameController.dispose();
-    _dobController.dispose();
-    _addressController.dispose();
-    _mobileController.dispose();
-    _emailController.dispose();
-    super.dispose();
   }
 }

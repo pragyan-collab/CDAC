@@ -1,32 +1,85 @@
+// lib/screens/info/scheme_detail_screen.dart
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
+import '../../utils/argument_helper.dart';
 import '../../widgets/header_widget.dart';
 import '../../models/scheme_model.dart';
+import '../../widgets/safe_navigation.dart';
 
-class SchemeDetailScreen extends StatelessWidget {
+class SchemeDetailScreen extends StatefulWidget {
   const SchemeDetailScreen({Key? key}) : super(key: key);
 
   @override
+  State<SchemeDetailScreen> createState() => _SchemeDetailScreenState();
+}
+
+class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
+  SchemeModel? scheme;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (scheme == null) {
+      final args = ArgumentHelper.getArgument<Map>(
+        context,
+        routeName: AppRoutes.schemeDetail,
+      );
+
+      if (args != null && args['scheme'] != null) {
+        scheme = args['scheme'] as SchemeModel;
+      }
+    }
+  }
+
+  void _navigateToApply() {
+    if (scheme == null) return;
+
+    SafeNavigation.navigateTo(
+      AppRoutes.apply,
+      arguments: {'service': scheme!.title},
+    );
+  }
+
+  @override
+  void dispose() {
+    ArgumentHelper.clearArguments(AppRoutes.schemeDetail);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
-    final scheme = args['scheme'] as SchemeModel;
+    if (scheme == null) {
+      return Scaffold(
+        appBar: const HeaderWidget(showBackButton: true),
+        body: const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(
+              AppConstants.primaryBlue,
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: const HeaderWidget(showBackButton: true),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppConstants.primaryBlue, AppConstants.primaryBlueDark],
+                gradient: const LinearGradient(
+                  colors: [
+                    AppConstants.primaryBlue,
+                    AppConstants.primaryBlueDark
+                  ],
                 ),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,19 +93,19 @@ class SchemeDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    scheme.title,
+                    scheme!.title,
                     style: const TextStyle(
                       color: AppConstants.white,
-                      fontSize: 24,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    scheme.department,
-                    style: TextStyle(
-                      color: AppConstants.white.withOpacity(0.9),
-                      fontSize: 14,
+                    scheme!.department,
+                    style: const TextStyle(
+                      color: AppConstants.white,
+                      fontSize: 16,
                     ),
                   ),
                 ],
@@ -61,12 +114,11 @@ class SchemeDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Last Date
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppConstants.primaryOrange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppConstants.primaryOrange),
               ),
               child: Row(
@@ -74,6 +126,7 @@ class SchemeDetailScreen extends StatelessWidget {
                   const Icon(
                     Icons.warning_amber_rounded,
                     color: AppConstants.primaryOrange,
+                    size: 24,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -88,9 +141,9 @@ class SchemeDetailScreen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '${scheme.lastDate.day}/${scheme.lastDate.month}/${scheme.lastDate.year}',
+                          '${scheme!.lastDate.day}/${scheme!.lastDate.month}/${scheme!.lastDate.year}',
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: AppConstants.primaryOrange,
                           ),
@@ -104,75 +157,38 @@ class SchemeDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Description
-            _buildSection(
-              'About the Scheme',
-              scheme.description,
-            ),
-
+            _buildSection('About the Scheme', scheme!.description),
             const SizedBox(height: 16),
-
-            // Eligibility
-            _buildSection(
-              'Eligibility Criteria',
-              scheme.eligibility,
-              icon: Icons.check_circle,
-            ),
-
+            _buildSection('Eligibility Criteria', scheme!.eligibility, icon: Icons.check_circle),
             const SizedBox(height: 16),
-
-            // Benefits
-            _buildSection(
-              'Benefits',
-              scheme.benefits,
-              icon: Icons.emoji_events,
-            ),
-
+            _buildSection('Benefits', scheme!.benefits, icon: Icons.emoji_events),
             const SizedBox(height: 16),
-
-            // Documents Required
-            _buildSection(
-              'Documents Required',
-              scheme.documents,
-              icon: Icons.description,
-            ),
-
+            _buildSection('Documents Required', scheme!.documents, icon: Icons.description),
             const SizedBox(height: 16),
+            _buildSection('How to Apply', scheme!.applicationProcess, icon: Icons.assignment),
 
-            // Application Process
-            _buildSection(
-              'How to Apply',
-              scheme.applicationProcess,
-              icon: Icons.assignment,
-            ),
+            const SizedBox(height: 30),
 
-            const SizedBox(height: 24),
-
-            // Apply Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.apply,
-                    arguments: {'service': scheme.title},
-                  );
-                },
+                onPressed: _navigateToApply,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppConstants.successGreen,
                   padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: const Text(
                   'Apply Now',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
 
             const SizedBox(height: 16),
 
-            // Share Button
             OutlinedButton.icon(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -187,7 +203,10 @@ class SchemeDetailScreen extends StatelessWidget {
                 foregroundColor: AppConstants.primaryBlue,
                 side: const BorderSide(color: AppConstants.primaryBlue),
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                minimumSize: const Size(double.infinity, 0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                minimumSize: const Size(double.infinity, 50),
               ),
             ),
           ],
@@ -198,7 +217,7 @@ class SchemeDetailScreen extends StatelessWidget {
 
   Widget _buildSection(String title, String content, {IconData? icon}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppConstants.white,
         borderRadius: BorderRadius.circular(12),
@@ -216,7 +235,7 @@ class SchemeDetailScreen extends StatelessWidget {
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppConstants.textDark,
                 ),
@@ -227,7 +246,7 @@ class SchemeDetailScreen extends StatelessWidget {
           Text(
             content,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 15,
               color: AppConstants.textMedium,
               height: 1.5,
             ),

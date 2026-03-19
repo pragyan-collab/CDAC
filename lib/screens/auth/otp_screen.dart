@@ -1,10 +1,14 @@
+// lib/screens/auth/otp_screen.dart
 import 'package:flutter/material.dart';
-import 'package:pin_code_fields/pin_code_fields.dart';
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
+import '../../utils/argument_helper.dart';
+import '../../utils/input_validators.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/safe_navigation.dart';
 import '../../widgets/header_widget.dart';
 import '../../widgets/loading_widget.dart';
+import '../../widgets/otp_input_widget.dart';
 
 class OTPScreen extends StatefulWidget {
   const OTPScreen({Key? key}) : super(key: key);
@@ -14,40 +18,59 @@ class OTPScreen extends StatefulWidget {
 }
 
 class _OTPScreenState extends State<OTPScreen> {
-  final TextEditingController _otpController = TextEditingController();
+  final GlobalKey<OtpInputWidgetState> _otpInputKey = GlobalKey();
+  String _otpValue = '';
+
   bool _isLoading = false;
   String? _errorMessage;
+
   int _timerSeconds = 30;
   bool _canResend = false;
 
+  String _aadhaar = '';
+  bool _isInit = false;
+
   @override
-  void initState() {
-    super.initState();
-    _startTimer();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_isInit) {
+      final args = ArgumentHelper.getArgument<Map>(
+        context,
+        routeName: AppRoutes.otp,
+      );
+
+      if (args != null) {
+        _aadhaar = (args['aadhaar'] as String?) ?? '';
+      }
+
+      _startTimer();
+      _isInit = true;
+    }
   }
 
   void _startTimer() {
     Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
+      if (!mounted) return;
+
+      if (_timerSeconds > 0) {
         setState(() {
-          if (_timerSeconds > 0) {
-            _timerSeconds--;
-            _startTimer();
-          } else {
-            _canResend = true;
-          }
+          _timerSeconds--;
+        });
+        _startTimer();
+      } else {
+        setState(() {
+          _canResend = true;
         });
       }
     });
   }
 
   Future<void> _verifyOTP() async {
-    String otp = _otpController.text;
+    if (_isLoading) return;
 
-    if (otp.length != 6) {
-      setState(() {
-        _errorMessage = 'Please enter 6-digit OTP';
-      });
+    if (!InputValidators.isValidOtp(_otpValue)) {
+      setState(() => _errorMessage = 'Please enter valid 6-digit OTP');
       return;
     }
 
@@ -56,178 +79,189 @@ class _OTPScreenState extends State<OTPScreen> {
       _errorMessage = null;
     });
 
-    final user = await AuthService().verifyOTP(otp);
+    try {
+      final user = await AuthService().verifyOTP(_otpValue);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _isLoading = false;
-    });
+      if (user != null) {
+        ArgumentHelper.clearArguments(AppRoutes.otp);
 
-    if (user != null) {
-      Navigator.pushReplacementNamed(context, AppRoutes.home);
-    } else {
+        // Unfocus before navigation to avoid focus-related disposal issues
+        _otpInputKey.currentState?.unfocusAll();
+
+        // Defer navigation to next frame - allows clean widget teardown
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          SafeNavigation.navigateReplacementTo(AppRoutes.home);
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Invalid OTP';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+
       setState(() {
-        _errorMessage = 'Invalid OTP';
+        _isLoading = false;
+        _errorMessage = 'Something went wrong. Please try again.';
       });
     }
   }
 
   void _resendOTP() {
-    if (_canResend) {
+    if (_canResend && !_isLoading) {
       setState(() {
         _canResend = false;
         _timerSeconds = 30;
       });
+
       _startTimer();
-      // Implement resend OTP logic
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('OTP resent successfully')),
-      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('OTP resent successfully'),
+            backgroundColor: AppConstants.successGreen,
+          ),
+        );
+      }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map?;
-    final aadhaar = args?['aadhaar'] ?? '';
+  void _handleBackPressed() {
+    // Unfocus OTP fields before pop - ensures clean disposal
+    _otpInputKey.currentState?.unfocusAll();
 
-    return Scaffold(
-      appBar: const HeaderWidget(showBackButton: true),
-      body: _isLoading
-          ? const LoadingWidget(message: 'Verifying OTP...')
-          : SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppConstants.screenPadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Enter OTP',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppConstants.textDark,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'OTP sent to Aadhaar **** **** $aadhaar',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppConstants.textMedium,
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // OTP input
-              PinCodeTextField(
-                appContext: context,
-                length: 6,
-                controller: _otpController,
-                keyboardType: TextInputType.number,
-                textStyle: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppConstants.textDark,
-                ),
-                pinTheme: PinTheme(
-                  shape: PinCodeFieldShape.box,
-                  borderRadius: BorderRadius.circular(8),
-                  fieldHeight: 60,
-                  fieldWidth: 45,
-                  activeFillColor: AppConstants.white,
-                  activeColor: AppConstants.primaryBlue,
-                  selectedFillColor: AppConstants.white,
-                  selectedColor: AppConstants.primaryOrange,
-                  inactiveFillColor: AppConstants.white,
-                  inactiveColor: AppConstants.primaryBlue.withOpacity(0.3),
-                ),
-                onChanged: (value) {
-                  if (value.length == 6) {
-                    _verifyOTP();
-                  }
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              if (_errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppConstants.errorBg,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error, color: AppConstants.errorRed),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: AppConstants.errorRed),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Timer and resend
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    _canResend ? 'Didn\'t receive OTP? ' : 'Resend OTP in $_timerSeconds seconds',
-                    style: const TextStyle(color: AppConstants.textMedium),
-                  ),
-                  if (_canResend)
-                    TextButton(
-                      onPressed: _resendOTP,
-                      child: const Text(
-                        'Resend',
-                        style: TextStyle(
-                          color: AppConstants.primaryOrange,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              // Verify button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _verifyOTP,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppConstants.successGreen,
-                    foregroundColor: AppConstants.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Verify OTP',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      SafeNavigation.pop();
+    });
   }
 
   @override
   void dispose() {
-    _otpController.dispose();
+    ArgumentHelper.clearArguments(AppRoutes.otp);
     super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: HeaderWidget(
+        showBackButton: true,
+        onBackPressed: _handleBackPressed,
+      ),
+      body: _isLoading
+          ? const LoadingWidget(message: 'Verifying OTP...')
+          : SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Enter OTP',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: AppConstants.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'OTP sent to Aadhaar XXXX XXXX ${_aadhaar.length >= 8 ? _aadhaar.substring(8) : ''}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: AppConstants.textMedium,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    OtpInputWidget(
+                      key: _otpInputKey,
+                      length: 6,
+                      onChanged: (value) => setState(() => _otpValue = value),
+                    ),
+                    const SizedBox(height: 20),
+                    if (_errorMessage != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppConstants.errorBg,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.error,
+                              color: AppConstants.errorRed,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: const TextStyle(
+                                  color: AppConstants.errorRed,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _canResend
+                              ? "Didn't receive OTP? "
+                              : 'Resend OTP in $_timerSeconds seconds',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppConstants.textMedium,
+                          ),
+                        ),
+                        if (_canResend)
+                          TextButton(
+                            onPressed: _resendOTP,
+                            child: const Text(
+                              'Resend',
+                              style: TextStyle(
+                                color: AppConstants.primaryOrange,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _verifyOTP,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppConstants.successGreen,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Verify OTP',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
   }
 }

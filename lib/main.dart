@@ -1,6 +1,8 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 
+import 'widgets/safe_navigation.dart';
+
 // Auth Screens
 import 'screens/auth/splash_screen.dart';
 import 'screens/auth/language_screen.dart';
@@ -32,12 +34,16 @@ import 'screens/info/about_screen.dart';
 
 // Utils and Services
 import 'utils/routes.dart';
-import 'utils/constants.dart';
 import 'utils/language_utils.dart';
+import 'utils/error_handler.dart';
 import 'services/data_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize error handler FIRST
+  ErrorHandler.initialize();
+
   DataService().initMockData();
   runApp(const CivicKioskApp());
 }
@@ -56,14 +62,14 @@ class _CivicKioskAppState extends State<CivicKioskApp> {
   @override
   void initState() {
     super.initState();
-    _loadLanguage();
+    _initializeApp();
   }
 
-  Future<void> _loadLanguage() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    setState(() {
-      _isLoading = false;
-    });
+  Future<void> _initializeApp() async {
+    await _languageUtils.getLanguage();
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -82,198 +88,145 @@ class _CivicKioskAppState extends State<CivicKioskApp> {
     return MaterialApp(
       title: 'Civic Kiosk',
       debugShowCheckedModeBanner: false,
-
-      // Theme Configuration
-      theme: ThemeData(
-        primaryColor: const Color(0xFF1E3A8A),
-        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-        fontFamily: 'Poppins',
-
-        // AppBar Theme
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          iconTheme: IconThemeData(color: Color(0xFF1E3A8A)),
-          titleTextStyle: TextStyle(
-            color: Color(0xFF1E3A8A),
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-
-        // Elevated Button Theme
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF1E3A8A),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-        ),
-
-        // Outlined Button Theme
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF1E3A8A),
-            side: const BorderSide(color: Color(0xFF1E3A8A)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-        ),
-
-        // Text Button Theme
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF1E3A8A),
-          ),
-        ),
-
-        // Input Decoration Theme
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(8)),
-            borderSide: BorderSide(color: Color(0xFF1E3A8A)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(8)),
-            borderSide: BorderSide(color: Color(0xFF1E3A8A), width: 2),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(8)),
-            borderSide: BorderSide(color: Color(0xFFDC2626)),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(8)),
-            borderSide: BorderSide(color: Color(0xFFDC2626), width: 2),
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          labelStyle: TextStyle(color: Color(0xFF6B7280)),
-          hintStyle: TextStyle(color: Color(0xFF6B7280)),
-        ),
-
-        // Card Theme - Using the correct type
-        cardTheme: const CardThemeData(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(12)),
-          ),
-          color: Colors.white,
-        ),
-
-        // Bottom Navigation Bar Theme
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Colors.white,
-          selectedItemColor: Color(0xFF1E3A8A),
-          unselectedItemColor: Color(0xFF6B7280),
-          type: BottomNavigationBarType.fixed,
-          elevation: 8,
-        ),
-
-        // Tab Bar Theme - Using the correct type
-        tabBarTheme: const TabBarThemeData(
-          labelColor: Color(0xFF1E3A8A),
-          unselectedLabelColor: Color(0xFF6B7280),
-          indicatorColor: Color(0xFF1E3A8A),
-        ),
-
-        // Floating Action Button Theme
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Color(0xFFF97316),
-          foregroundColor: Colors.white,
-        ),
-
-        // Dialog Theme - Using the correct type
-        dialogTheme: const DialogThemeData(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(12)),
-          ),
-        ),
-
-        // Snackbar Theme
-        snackBarTheme: const SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(8)),
-          ),
-        ),
-      ),
-
-      // Initial Route
+      navigatorKey: SafeNavigation.navigatorKey,
+      theme: _buildTheme(),
       initialRoute: AppRoutes.splash,
+      onGenerateRoute: _generateRoute,
+    );
+  }
 
-      // All routes
-      routes: {
-        // Auth Routes
-        AppRoutes.splash: (context) => const SplashScreen(),
-        AppRoutes.language: (context) => const LanguageScreen(),
-        AppRoutes.login: (context) => const LoginScreen(),
-        AppRoutes.otp: (context) {
-          // Get arguments if any
-          final args = ModalRoute.of(context)?.settings.arguments;
-          return const OTPScreen();
-        },
-
-        // User Routes
-        AppRoutes.home: (context) => const HomeScreen(),
-        AppRoutes.services: (context) => const ServicesScreen(),
-        AppRoutes.apply: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map?;
-          return const ApplyScreen();
-        },
-        AppRoutes.upload: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map?;
-          return const UploadScreen();
-        },
-        AppRoutes.status: (context) => const StatusScreen(),
-
-        // Payment Routes
-        AppRoutes.payment: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map?;
-          return const PaymentScreen();
-        },
-        AppRoutes.paymentWebview: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map?;
-          return const PaymentWebview();
-        },
-        AppRoutes.receipt: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map?;
-          return const ReceiptScreen();
-        },
-
-        // Admin Routes
-        AppRoutes.adminLogin: (context) => const AdminLoginScreen(),
-        AppRoutes.adminDashboard: (context) => const AdminDashboardScreen(),
-        AppRoutes.adminDetail: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map?;
-          return const AdminDetailScreen();
-        },
-
-        // Info Routes
-        AppRoutes.schemesList: (context) => const SchemesScreen(),
-        AppRoutes.schemeDetail: (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map?;
-          return const SchemeDetailScreen();
-        },
-        AppRoutes.newsList: (context) => const NewsScreen(),
-        AppRoutes.about: (context) => const AboutScreen(),
-      },
-
-      // Unknown Route
-      onUnknownRoute: (settings) {
+  Route<dynamic>? _generateRoute(RouteSettings settings) {
+    switch (settings.name) {
+    // Auth Routes
+      case AppRoutes.splash:
+        return MaterialPageRoute(builder: (_) => const SplashScreen());
+      case AppRoutes.language:
+        return MaterialPageRoute(builder: (_) => const LanguageScreen());
+      case AppRoutes.login:
+        return MaterialPageRoute(builder: (_) => const LoginScreen());
+      case AppRoutes.otp:
         return MaterialPageRoute(
-          builder: (context) => const Scaffold(
-            body: Center(
-              child: Text('Page not found'),
-            ),
+          builder: (_) => const OTPScreen(),
+          settings: settings,
+        );
+
+    // User Routes
+      case AppRoutes.home:
+        return MaterialPageRoute(builder: (_) => const HomeScreen());
+      case AppRoutes.services:
+        return MaterialPageRoute(builder: (_) => const ServicesScreen());
+      case AppRoutes.apply:
+        return MaterialPageRoute(
+          builder: (_) => const ApplyScreen(),
+          settings: settings,
+        );
+      case AppRoutes.upload:
+        return MaterialPageRoute(
+          builder: (_) => const UploadScreen(),
+          settings: settings,
+        );
+      case AppRoutes.status:
+        return MaterialPageRoute(builder: (_) => const StatusScreen());
+
+    // Payment Routes
+      case AppRoutes.payment:
+        return MaterialPageRoute(
+          builder: (_) => const PaymentScreen(),
+          settings: settings,
+        );
+      case AppRoutes.paymentWebview:
+        return MaterialPageRoute(
+          builder: (_) => const PaymentWebview(),
+          settings: settings,
+        );
+      case AppRoutes.receipt:
+        return MaterialPageRoute(
+          builder: (_) => const ReceiptScreen(),
+          settings: settings,
+        );
+
+    // Admin Routes
+      case AppRoutes.adminLogin:
+        return MaterialPageRoute(builder: (_) => const AdminLoginScreen());
+      case AppRoutes.adminDashboard:
+        return MaterialPageRoute(builder: (_) => const AdminDashboardScreen());
+      case AppRoutes.adminDetail:
+        return MaterialPageRoute(
+          builder: (_) => const AdminDetailScreen(),
+          settings: settings,
+        );
+
+    // Info Routes
+      case AppRoutes.schemesList:
+        return MaterialPageRoute(builder: (_) => const SchemesScreen());
+      case AppRoutes.schemeDetail:
+        return MaterialPageRoute(
+          builder: (_) => const SchemeDetailScreen(),
+          settings: settings,
+        );
+      case AppRoutes.newsList:
+        return MaterialPageRoute(builder: (_) => const NewsScreen());
+      case AppRoutes.about:
+        return MaterialPageRoute(builder: (_) => const AboutScreen());
+
+      default:
+        return MaterialPageRoute(
+          builder: (_) => const Scaffold(
+            body: Center(child: Text('Page not found')),
           ),
         );
-      },
+    }
+  }
+
+  ThemeData _buildTheme() {
+    return ThemeData(
+      primaryColor: const Color(0xFF1E3A8A),
+      scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+      fontFamily: 'Poppins',
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: IconThemeData(color: Color(0xFF1E3A8A)),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF1E3A8A),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+      ),
+      inputDecorationTheme: const InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+          borderSide: BorderSide(color: Color(0xFF1E3A8A)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+          borderSide: BorderSide(color: Color(0xFF1E3A8A), width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+          borderSide: BorderSide(color: Color(0xFFDC2626)),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+      cardTheme: const CardThemeData(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+        color: Colors.white,
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Colors.white,
+        selectedItemColor: Color(0xFF1E3A8A),
+        unselectedItemColor: Color(0xFF6B7280),
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+      ),
     );
   }
 }

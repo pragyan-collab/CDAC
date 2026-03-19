@@ -6,18 +6,32 @@ class LanguageUtils {
   static const String _selectedLanguage = 'selected_language';
 
   Future<void> setLanguage(String languageCode) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_selectedLanguage, languageCode);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_selectedLanguage, languageCode);
+    } catch (e) {
+      print('Error setting language: $e');
+    }
   }
 
   Future<String> getLanguage() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_selectedLanguage) ?? 'en'; // Default to English
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_selectedLanguage) ?? 'en';
+    } catch (e) {
+      print('Error getting language: $e');
+      return 'en';
+    }
   }
 
   Future<bool> hasSelectedLanguage() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.containsKey(_selectedLanguage);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.containsKey(_selectedLanguage);
+    } catch (e) {
+      print('Error checking language: $e');
+      return false;
+    }
   }
 
   Locale getLocale(String languageCode) {

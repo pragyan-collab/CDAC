@@ -9,16 +9,37 @@ class AuthService {
   UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
 
-  // Mock login
+  static const _otpTimeout = Duration(seconds: 5);
+  static const _sendOtpTimeout = Duration(seconds: 5);
+
+  /// Send OTP with timeout handling
   Future<bool> sendOTP(String aadhaarNumber) async {
-    await Future.delayed(const Duration(seconds: 2));
-    // Mock validation - accept any 12 digit number
-    return aadhaarNumber.length == 12 && RegExp(r'^[0-9]+$').hasMatch(aadhaarNumber);
+    try {
+      return await _sendOTPImpl(aadhaarNumber)
+          .timeout(_sendOtpTimeout, onTimeout: () => false);
+    } on TimeoutException {
+      return false;
+    }
   }
 
+  Future<bool> _sendOTPImpl(String aadhaarNumber) async {
+    await Future.delayed(const Duration(seconds: 2));
+    return aadhaarNumber.length == 12 &&
+        RegExp(r'^[0-9]+$').hasMatch(aadhaarNumber);
+  }
+
+  /// Verify OTP with timeout handling
   Future<UserModel?> verifyOTP(String otp) async {
+    try {
+      return await _verifyOTPImpl(otp)
+          .timeout(_otpTimeout, onTimeout: () => null);
+    } on TimeoutException {
+      return null;
+    }
+  }
+
+  Future<UserModel?> _verifyOTPImpl(String otp) async {
     await Future.delayed(const Duration(seconds: 1));
-    // Mock verification - accept any 6 digit OTP
     if (otp.length == 6 && RegExp(r'^[0-9]+$').hasMatch(otp)) {
       _currentUser = UserModel(
         aadhaarNumber: '123456789012',

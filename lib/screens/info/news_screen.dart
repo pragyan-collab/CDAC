@@ -1,6 +1,8 @@
+// lib/screens/info/news_screen.dart
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
+import '../../widgets/safe_navigation.dart';
 import '../../widgets/header_widget.dart';
 import '../../widgets/bottom_nav.dart';
 
@@ -74,28 +76,51 @@ class _NewsScreenState extends State<NewsScreen> with SingleTickerProviderStateM
     _tabController = TabController(length: 3, vsync: this);
   }
 
+  void _onBottomNavTap(int index) {
+    if (index == _currentIndex) return;
+
+    setState(() => _currentIndex = index);
+
+    switch (index) {
+      case 0:
+        SafeNavigation.navigateReplacementTo(AppRoutes.home);
+        break;
+      case 1:
+        SafeNavigation.navigateReplacementTo(AppRoutes.services);
+        break;
+      case 2:
+        SafeNavigation.navigateReplacementTo(AppRoutes.schemesList);
+        break;
+      case 3:
+        break;
+      case 4:
+        SafeNavigation.navigateReplacementTo(AppRoutes.about);
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppConstants.white,
-        elevation: 2,
-        title: const Text(
-          'News & Updates',
-          style: TextStyle(
-            color: AppConstants.primaryBlue,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppConstants.primaryBlue,
-          labelColor: AppConstants.primaryBlue,
-          unselectedLabelColor: AppConstants.textMedium,
-          tabs: const [
-            Tab(text: 'All'),
-            Tab(text: 'Important'),
-            Tab(text: 'Updates'),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120),
+        child: Column(
+          children: [
+            const HeaderWidget(showBackButton: false),
+            Container(
+              color: AppConstants.white,
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: AppConstants.primaryBlue,
+                labelColor: AppConstants.primaryBlue,
+                unselectedLabelColor: AppConstants.textMedium,
+                tabs: const [
+                  Tab(text: 'All'),
+                  Tab(text: 'Important'),
+                  Tab(text: 'Updates'),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -109,29 +134,7 @@ class _NewsScreenState extends State<NewsScreen> with SingleTickerProviderStateM
       ),
       bottomNavigationBar: BottomNavWidget(
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-
-          switch(index) {
-            case 0:
-              Navigator.pushReplacementNamed(context, AppRoutes.home);
-              break;
-            case 1:
-              Navigator.pushReplacementNamed(context, AppRoutes.services);
-              break;
-            case 2:
-              Navigator.pushReplacementNamed(context, AppRoutes.schemesList);
-              break;
-            case 3:
-            // Already here
-              break;
-            case 4:
-              Navigator.pushReplacementNamed(context, AppRoutes.about);
-              break;
-          }
-        },
+        onTap: _onBottomNavTap,
       ),
     );
   }

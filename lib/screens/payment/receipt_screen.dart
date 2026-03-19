@@ -1,27 +1,72 @@
+// lib/screens/payment/receipt_screen.dart
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
+import '../../utils/argument_helper.dart';
 import '../../widgets/header_widget.dart';
+import '../../widgets/safe_navigation.dart';
 
-class ReceiptScreen extends StatelessWidget {
+class ReceiptScreen extends StatefulWidget {
   const ReceiptScreen({Key? key}) : super(key: key);
 
   @override
+  State<ReceiptScreen> createState() => _ReceiptScreenState();
+}
+
+class _ReceiptScreenState extends State<ReceiptScreen> {
+  String receiptId = '';
+  double amount = 0.0;
+  String serviceName = '';
+  String applicationId = '';
+
+  bool _argsLoaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_argsLoaded) {
+      _argsLoaded = true;
+      _getArguments();
+    }
+  }
+
+  void _getArguments() {
+    final args = ArgumentHelper.getArgument<Map>(
+      context,
+      routeName: AppRoutes.receipt,
+    );
+    if (args != null) {
+      receiptId = (args['receiptId'] as String?) ?? '';
+      amount = (args['amount'] ?? 0.0).toDouble();
+      serviceName = (args['serviceName'] as String?) ?? '';
+      applicationId = (args['applicationId'] as String?) ?? '';
+    }
+  }
+
+  void _navigateToHome() {
+    SafeNavigation.navigateAndRemoveUntil(AppRoutes.home);
+  }
+
+  void _navigateToStatus() {
+    SafeNavigation.navigateTo(AppRoutes.status);
+  }
+
+  @override
+  void dispose() {
+    ArgumentHelper.clearArguments(AppRoutes.receipt);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
-    final receiptId = args['receiptId'];
-    final amount = args['amount'];
-    final serviceName = args['serviceName'];
-    final applicationId = args['applicationId'];
     final paymentDate = DateTime.now();
 
     return Scaffold(
       appBar: const HeaderWidget(showBackButton: false),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppConstants.screenPadding),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            // Success Icon
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -35,12 +80,12 @@ class ReceiptScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
             const Text(
               'Payment Successful!',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: AppConstants.textDark,
               ),
@@ -51,31 +96,29 @@ class ReceiptScreen extends StatelessWidget {
             Text(
               'Your application has been submitted',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 16,
                 color: AppConstants.textMedium,
               ),
             ),
 
             const SizedBox(height: 32),
 
-            // Receipt Card
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: AppConstants.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: AppConstants.buttonShadow,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header
                   Row(
                     children: [
                       Image.asset(
                         'assets/images/emblem.png',
-                        height: 40,
-                        width: 40,
+                        height: 50,
+                        width: 50,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -85,7 +128,7 @@ class ReceiptScreen extends StatelessWidget {
                             const Text(
                               'Government of India',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: AppConstants.textDark,
                               ),
@@ -93,7 +136,7 @@ class ReceiptScreen extends StatelessWidget {
                             Text(
                               'Payment Receipt',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 14,
                                 color: AppConstants.textMedium,
                               ),
                             ),
@@ -105,10 +148,15 @@ class ReceiptScreen extends StatelessWidget {
 
                   const Divider(height: 32),
 
-                  // Receipt Details
                   _buildReceiptRow('Receipt No.', receiptId),
-                  _buildReceiptRow('Date', '${paymentDate.day}/${paymentDate.month}/${paymentDate.year}'),
-                  _buildReceiptRow('Time', '${paymentDate.hour}:${paymentDate.minute}:${paymentDate.second}'),
+                  _buildReceiptRow(
+                    'Date',
+                    '${paymentDate.day}/${paymentDate.month}/${paymentDate.year}',
+                  ),
+                  _buildReceiptRow(
+                    'Time',
+                    '${paymentDate.hour.toString().padLeft(2, '0')}:${paymentDate.minute.toString().padLeft(2, '0')}',
+                  ),
 
                   const Divider(height: 24),
 
@@ -117,13 +165,19 @@ class ReceiptScreen extends StatelessWidget {
 
                   const Divider(height: 24),
 
-                  _buildReceiptRow('Amount Paid', '₹${amount.toStringAsFixed(2)}', isBold: true),
+                  _buildReceiptRow(
+                    'Amount Paid',
+                    '₹${amount.toStringAsFixed(2)}',
+                    isBold: true,
+                  ),
                   _buildReceiptRow('Payment Mode', 'UPI'),
-                  _buildReceiptRow('Transaction ID', 'TXN${DateTime.now().millisecondsSinceEpoch}'),
+                  _buildReceiptRow(
+                    'Transaction ID',
+                    'TXN${DateTime.now().millisecondsSinceEpoch}',
+                  ),
 
                   const SizedBox(height: 20),
 
-                  // Stamp
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -153,13 +207,11 @@ class ReceiptScreen extends StatelessWidget {
 
             const SizedBox(height: 32),
 
-            // Action Buttons
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
-                      // Share receipt
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Receipt downloaded'),
@@ -171,6 +223,9 @@ class ReceiptScreen extends StatelessWidget {
                       foregroundColor: AppConstants.primaryBlue,
                       side: const BorderSide(color: AppConstants.primaryBlue),
                       padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text('Download'),
                   ),
@@ -178,16 +233,13 @@ class ReceiptScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        AppRoutes.home,
-                            (route) => false,
-                      );
-                    },
+                    onPressed: _navigateToHome,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppConstants.primaryBlue,
                       padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text('Go to Home'),
                   ),
@@ -198,13 +250,12 @@ class ReceiptScreen extends StatelessWidget {
             const SizedBox(height: 16),
 
             TextButton(
-              onPressed: () {
-                Navigator.pushNamed(context, AppRoutes.status);
-              },
+              onPressed: _navigateToStatus,
               child: const Text(
                 'Track Application Status',
                 style: TextStyle(
                   color: AppConstants.primaryBlue,
+                  fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),
               ),

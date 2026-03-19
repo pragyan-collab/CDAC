@@ -4,6 +4,7 @@ import '../../utils/routes.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/header_widget.dart';
 import '../../widgets/loading_widget.dart';
+import '../../widgets/safe_navigation.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({Key? key}) : super(key: key);
@@ -37,14 +38,16 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       });
 
       if (success) {
-        Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
+        SafeNavigation.navigateReplacementTo(AppRoutes.adminDashboard);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid username or password'),
-            backgroundColor: AppConstants.errorRed,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invalid username or password'),
+              backgroundColor: AppConstants.errorRed,
+            ),
+          );
+        }
       }
     }
   }

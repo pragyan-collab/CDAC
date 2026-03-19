@@ -1,9 +1,12 @@
+// lib/screens/user/upload_screen.dart
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
+import '../../utils/argument_helper.dart';
 import '../../widgets/header_widget.dart';
+import '../../widgets/safe_navigation.dart';
 
 class UploadScreen extends StatefulWidget {
   const UploadScreen({Key? key}) : super(key: key);
@@ -14,7 +17,7 @@ class UploadScreen extends StatefulWidget {
 
 class _UploadScreenState extends State<UploadScreen> {
   final ImagePicker _picker = ImagePicker();
-  Map<String, File?> uploadedFiles = {
+  final Map<String, File?> uploadedFiles = {
     'photo': null,
     'aadhaar': null,
     'address': null,
@@ -34,17 +37,34 @@ class _UploadScreenState extends State<UploadScreen> {
     {'key': 'other', 'name': 'Other Documents', 'icon': '📄'},
   ];
 
+  bool _argsLoaded = false;
+
   @override
-  void initState() {
-    super.initState();
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
-    formData = args['formData'];
-    serviceName = args['service'];
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_argsLoaded) {
+      _argsLoaded = true;
+      _getArguments();
+    }
+  }
+
+  void _getArguments() {
+    final args = ArgumentHelper.getArgument<Map>(
+      context,
+      routeName: AppRoutes.upload,
+    );
+    if (args != null) {
+      formData = args['formData'] as Map<String, dynamic>?;
+      serviceName = args['service'] as String?;
+    }
   }
 
   Future<void> _pickImage(String documentKey) async {
     showModalBottomSheet(
       context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (BuildContext context) {
         return SafeArea(
           child: Wrap(
@@ -60,7 +80,7 @@ class _UploadScreenState extends State<UploadScreen> {
                     maxHeight: 1024,
                     imageQuality: 80,
                   );
-                  if (image != null) {
+                  if (image != null && mounted) {
                     setState(() {
                       uploadedFiles[documentKey] = File(image.path);
                     });
@@ -78,7 +98,7 @@ class _UploadScreenState extends State<UploadScreen> {
                     maxHeight: 1024,
                     imageQuality: 80,
                   );
-                  if (image != null) {
+                  if (image != null && mounted) {
                     setState(() {
                       uploadedFiles[documentKey] = File(image.path);
                     });
@@ -93,7 +113,6 @@ class _UploadScreenState extends State<UploadScreen> {
   }
 
   void _submitApplication() async {
-    // Check if at least photo and aadhaar are uploaded
     if (uploadedFiles['photo'] == null || uploadedFiles['aadhaar'] == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -104,41 +123,38 @@ class _UploadScreenState extends State<UploadScreen> {
       return;
     }
 
-    setState(() {
-      _isUploading = true;
-    });
+    setState(() => _isUploading = true);
 
-    // Simulate upload
     await Future.delayed(const Duration(seconds: 2));
 
     if (!mounted) return;
 
-    setState(() {
-      _isUploading = false;
-    });
+    setState(() => _isUploading = false);
 
-    // Navigate to payment or status based on service
     if (serviceName?.contains('Certificate') ?? false) {
-      // Navigate to payment for certificate services
-      Navigator.pushNamed(
-        context,
+      SafeNavigation.navigateTo(
         AppRoutes.payment,
         arguments: {
-          'amount': 100.0, // Example fee
+          'amount': 100.0,
           'serviceName': serviceName,
           'applicationId': 'APP${DateTime.now().millisecondsSinceEpoch}',
         },
       );
     } else {
-      // Direct to status for free services
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Application submitted successfully!'),
           backgroundColor: AppConstants.successGreen,
         ),
       );
-      Navigator.pushReplacementNamed(context, AppRoutes.status);
+      SafeNavigation.navigateReplacementTo(AppRoutes.status);
     }
+  }
+
+  @override
+  void dispose() {
+    ArgumentHelper.clearArguments(AppRoutes.upload);
+    super.dispose();
   }
 
   @override
@@ -146,14 +162,14 @@ class _UploadScreenState extends State<UploadScreen> {
     return Scaffold(
       appBar: const HeaderWidget(showBackButton: true),
       body: _isUploading
-          ? Center(
+          ? const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(
+            CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(AppConstants.primaryBlue),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               'Uploading documents...',
               style: TextStyle(
@@ -165,16 +181,15 @@ class _UploadScreenState extends State<UploadScreen> {
         ),
       )
           : SingleChildScrollView(
-        padding: const EdgeInsets.all(AppConstants.screenPadding),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Service Info Card
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppConstants.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: AppConstants.buttonShadow,
               ),
               child: Column(
@@ -183,16 +198,16 @@ class _UploadScreenState extends State<UploadScreen> {
                   const Text(
                     'Application Summary',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppConstants.textDark,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Text(
                     'Service: $serviceName',
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 16,
                       color: AppConstants.textMedium,
                     ),
                   ),
@@ -200,7 +215,7 @@ class _UploadScreenState extends State<UploadScreen> {
                   Text(
                     'Applicant: ${formData?['name']}',
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 16,
                       color: AppConstants.textMedium,
                     ),
                   ),
@@ -208,13 +223,12 @@ class _UploadScreenState extends State<UploadScreen> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
-            // Documents List
             const Text(
               'Required Documents',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppConstants.textDark,
               ),
@@ -223,11 +237,11 @@ class _UploadScreenState extends State<UploadScreen> {
             const Text(
               'Upload clear images of the following documents',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 14,
                 color: AppConstants.textMedium,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
             ...requiredDocuments.map((doc) {
               final isUploaded = uploadedFiles[doc['key']] != null;
@@ -255,17 +269,16 @@ class _UploadScreenState extends State<UploadScreen> {
                   title: Text(
                     doc['name']!,
                     style: const TextStyle(
+                      fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  subtitle: isUploaded
-                      ? const Text(
-                    'Uploaded',
-                    style: TextStyle(color: AppConstants.successGreen),
-                  )
-                      : const Text(
-                    'Not uploaded',
-                    style: TextStyle(color: AppConstants.errorRed),
+                  subtitle: Text(
+                    isUploaded ? 'Uploaded' : 'Not uploaded',
+                    style: TextStyle(
+                      color: isUploaded ? AppConstants.successGreen : AppConstants.errorRed,
+                      fontSize: 12,
+                    ),
                   ),
                   trailing: isUploaded
                       ? IconButton(
@@ -287,9 +300,8 @@ class _UploadScreenState extends State<UploadScreen> {
               );
             }).toList(),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 30),
 
-            // Submit Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -297,6 +309,9 @@ class _UploadScreenState extends State<UploadScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppConstants.successGreen,
                   padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: const Text(
                   'Submit Application',
@@ -307,15 +322,14 @@ class _UploadScreenState extends State<UploadScreen> {
 
             const SizedBox(height: 16),
 
-            // Note
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppConstants.primaryBlue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
-                children: const [
+              child: const Row(
+                children: [
                   Icon(Icons.info, color: AppConstants.primaryBlue, size: 20),
                   SizedBox(width: 8),
                   Expanded(

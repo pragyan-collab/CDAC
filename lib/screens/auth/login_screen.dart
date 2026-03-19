@@ -1,7 +1,10 @@
+// lib/screens/auth/login_screen.dart
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
+import '../../utils/input_validators.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/safe_navigation.dart';
 import '../../widgets/header_widget.dart';
 import '../../widgets/loading_widget.dart';
 
@@ -13,15 +16,16 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _aadhaarController = TextEditingController();
-  final List<TextEditingController> _boxControllers = List.generate(12, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(12, (_) => FocusNode());
+  final List<TextEditingController> _boxControllers =
+  List.generate(12, (_) => TextEditingController());
+  final List<FocusNode> _focusNodes =
+  List.generate(12, (_) => FocusNode());
+
   bool _isLoading = false;
   String? _errorMessage;
 
   @override
   void dispose() {
-    _aadhaarController.dispose();
     for (var controller in _boxControllers) {
       controller.dispose();
     }
@@ -32,25 +36,25 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _onAadhaarChanged(String value, int index) {
-    if (value.length == 1 && index < 11) {
-      _focusNodes[index + 1].requestFocus();
+    if (value.isNotEmpty && index < 11) {
+      FocusScope.of(context).requestFocus(_focusNodes[index + 1]);
+    } else if (value.isEmpty && index > 0) {
+      FocusScope.of(context).requestFocus(_focusNodes[index - 1]);
     }
+  }
 
-    // Update the main controller
-    String fullAadhaar = '';
-    for (var controller in _boxControllers) {
-      fullAadhaar += controller.text;
-    }
-    _aadhaarController.text = fullAadhaar;
+  String _getFullAadhaar() {
+    return _boxControllers.map((c) => c.text).join();
   }
 
   Future<void> _sendOTP() async {
-    String aadhaar = _aadhaarController.text;
+    if (_isLoading) return;
 
-    if (aadhaar.length != 12) {
-      setState(() {
-        _errorMessage = 'Please enter 12-digit Aadhaar number';
-      });
+    final aadhaar = _getFullAadhaar();
+
+    if (!InputValidators.isValidAadhaar(aadhaar)) {
+      setState(() =>
+          _errorMessage = 'Please enter valid 12-digit Aadhaar number');
       return;
     }
 
@@ -59,25 +63,26 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
-    bool success = await AuthService().sendOTP(aadhaar);
+    final success = await AuthService().sendOTP(aadhaar);
 
     if (!mounted) return;
 
-    setState(() {
-      _isLoading = false;
-    });
+    setState(() => _isLoading = false);
 
     if (success) {
-      Navigator.pushNamed(
-        context,
+      // ✅ UPDATED (NO CONTEXT)
+      SafeNavigation.navigateTo(
         AppRoutes.otp,
         arguments: {'aadhaar': aadhaar},
       );
     } else {
-      setState(() {
-        _errorMessage = 'Invalid Aadhaar number';
-      });
+      setState(() => _errorMessage = 'Invalid Aadhaar number');
     }
+  }
+
+  void _navigateToAdmin() {
+    // ✅ UPDATED (NO CONTEXT)
+    SafeNavigation.navigateTo(AppRoutes.adminLogin);
   }
 
   @override
@@ -88,14 +93,14 @@ class _LoginScreenState extends State<LoginScreen> {
           ? const LoadingWidget(message: 'Sending OTP...')
           : SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppConstants.screenPadding),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Welcome Back!',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: AppConstants.textDark,
                 ),
@@ -104,77 +109,107 @@ class _LoginScreenState extends State<LoginScreen> {
               const Text(
                 'Enter your Aadhaar number to continue',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 16,
                   color: AppConstants.textMedium,
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
 
-              // Aadhaar boxes
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: AppConstants.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: AppConstants.buttonShadow,
                 ),
                 child: Column(
                   children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    Row(
+                      mainAxisAlignment:
+                      MainAxisAlignment.spaceEvenly,
                       children: List.generate(12, (index) {
                         return SizedBox(
-                          width: 22,
+                          width: 28,
+                          height: 48,
                           child: TextField(
                             controller: _boxControllers[index],
                             focusNode: _focusNodes[index],
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
                             maxLength: 1,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                             decoration: InputDecoration(
                               counterText: '',
                               filled: true,
-                              fillColor: _boxControllers[index].text.isNotEmpty
-                                  ? AppConstants.filledBox
-                                  : AppConstants.white,
+                              fillColor: _boxControllers[index]
+                                  .text
+                                  .isNotEmpty
+                                  ? AppConstants.primaryBlue
+                                  .withOpacity(0.1)
+                                  : Colors.white,
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(4),
-                                borderSide: const BorderSide(color: AppConstants.primaryBlue),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(4),
+                                borderRadius:
+                                BorderRadius.circular(8),
                                 borderSide: BorderSide(
                                   color: index == 3 || index == 7
                                       ? AppConstants.primaryOrange
                                       : AppConstants.primaryBlue,
+                                  width: 1.5,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius:
+                                BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: index == 3 || index == 7
+                                      ? AppConstants.primaryOrange
+                                      : AppConstants.primaryBlue
+                                      .withOpacity(0.5),
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius:
+                                BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: index == 3 || index == 7
+                                      ? AppConstants.primaryOrange
+                                      : AppConstants.primaryBlue,
+                                  width: 2,
                                 ),
                               ),
                             ),
-                            onChanged: (value) => _onAadhaarChanged(value, index),
+                            onChanged: (value) =>
+                                _onAadhaarChanged(value, index),
                           ),
                         );
                       }),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    // Security note
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppConstants.primaryBlue.withOpacity(0.1),
+                        color: AppConstants.primaryBlue
+                            .withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.security, color: AppConstants.primaryBlue, size: 20),
+                          Icon(Icons.security,
+                              color:
+                              AppConstants.primaryBlue,
+                              size: 20),
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Your Aadhaar information is secure and encrypted',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: AppConstants.textMedium,
+                                color:
+                                AppConstants.textMedium,
                               ),
                             ),
                           ),
@@ -195,12 +230,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error, color: AppConstants.errorRed),
+                      const Icon(Icons.error,
+                          color: AppConstants.errorRed),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _errorMessage!,
-                          style: const TextStyle(color: AppConstants.errorRed),
+                          style: const TextStyle(
+                              color:
+                              AppConstants.errorRed),
                         ),
                       ),
                     ],
@@ -208,71 +246,42 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ],
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
 
-              // Voice button
-              Center(
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppConstants.primaryOrange,
-                    shape: BoxShape.circle,
-                    boxShadow: AppConstants.orangeButtonShadow,
-                  ),
-                  child: const Icon(
-                    Icons.mic,
-                    color: AppConstants.white,
-                    size: 40,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Center(
-                child: Text(
-                  'Speak Aadhaar Number',
-                  style: TextStyle(
-                    color: AppConstants.textMedium,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              // Send OTP button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _sendOTP,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppConstants.primaryBlue,
-                    foregroundColor: AppConstants.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor:
+                    AppConstants.primaryBlue,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius:
+                      BorderRadius.circular(12),
                     ),
                   ),
                   child: const Text(
                     'Send OTP',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
 
               const SizedBox(height: 16),
 
-              // Admin login link
               Center(
                 child: TextButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, AppRoutes.adminLogin);
-                  },
+                  onPressed: _navigateToAdmin,
                   child: const Text(
                     'Admin Login',
                     style: TextStyle(
                       color: AppConstants.primaryBlue,
                       fontWeight: FontWeight.w500,
+                      fontSize: 16,
                     ),
                   ),
                 ),

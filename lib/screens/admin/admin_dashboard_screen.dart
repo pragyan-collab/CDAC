@@ -1,19 +1,22 @@
+// lib/screens/admin/admin_dashboard_screen.dart
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
 import '../../services/data_service.dart';
 import '../../services/auth_service.dart';
-import '../../widgets/header_widget.dart';
+import '../../widgets/safe_navigation.dart';
 import '../../models/application_model.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({Key? key}) : super(key: key);
 
   @override
-  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+  State<AdminDashboardScreen> createState() =>
+      _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+class _AdminDashboardScreenState
+    extends State<AdminDashboardScreen> {
   List<ApplicationModel> pendingApplications = [];
   List<ApplicationModel> recentApprovals = [];
 
@@ -25,9 +28,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   void _loadData() {
     setState(() {
-      pendingApplications = DataService().getPendingApplications();
+      pendingApplications =
+          DataService().getPendingApplications();
       recentApprovals = DataService()
-          .getPendingApplications() // Replace with approved applications
+          .getPendingApplications()
           .take(5)
           .toList();
     });
@@ -35,10 +39,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   void _logout() {
     AuthService().logout();
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      AppRoutes.login,
-          (route) => false,
+
+    // ✅ FIXED (no context)
+    SafeNavigation.navigateAndRemoveUntil(AppRoutes.login);
+  }
+
+  void _navigateToDetail(ApplicationModel app) {
+    // ✅ FIXED (no context)
+    SafeNavigation.navigateTo(
+      AppRoutes.adminDetail,
+      arguments: {'application': app},
     );
   }
 
@@ -57,11 +67,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: AppConstants.primaryBlue),
+            icon: const Icon(Icons.refresh,
+                color: AppConstants.primaryBlue),
             onPressed: _loadData,
           ),
           IconButton(
-            icon: const Icon(Icons.logout, color: AppConstants.errorRed),
+            icon: const Icon(Icons.logout,
+                color: AppConstants.errorRed),
             onPressed: _logout,
           ),
         ],
@@ -71,7 +83,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Stats Cards
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -109,9 +120,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
             const SizedBox(height: 24),
 
-            // Pending Applications Section
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment:
+              MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'Pending Applications',
@@ -122,9 +133,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
                 TextButton(
-                  onPressed: () {
-                    // View all
-                  },
+                  onPressed: () {},
                   child: const Text('View All'),
                 ),
               ],
@@ -159,7 +168,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             else
               ListView.builder(
                 shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
+                physics:
+                const NeverScrollableScrollPhysics(),
                 itemCount: pendingApplications.length,
                 itemBuilder: (context, index) {
                   final app = pendingApplications[index];
@@ -169,7 +179,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
             const SizedBox(height: 24),
 
-            // Recent Approvals
             const Text(
               'Recent Approvals',
               style: TextStyle(
@@ -182,15 +191,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
             ListView.builder(
               shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
+              physics:
+              const NeverScrollableScrollPhysics(),
               itemCount: recentApprovals.length,
               itemBuilder: (context, index) {
                 final app = recentApprovals[index];
                 return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
+                  margin:
+                  const EdgeInsets.only(bottom: 8),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: AppConstants.successGreen.withOpacity(0.1),
+                      backgroundColor: AppConstants
+                          .successGreen
+                          .withOpacity(0.1),
                       child: const Icon(
                         Icons.check,
                         color: AppConstants.successGreen,
@@ -199,7 +212,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                     title: Text(app.serviceName),
                     subtitle: Text('ID: ${app.id}'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    trailing: const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16),
                   ),
                 );
               },
@@ -210,7 +225,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, Color color, IconData icon) {
+  Widget _buildStatCard(
+      String label, String value, Color color, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -220,11 +236,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment:
+        MainAxisAlignment.spaceBetween,
         children: [
           Icon(icon, color: color, size: 28),
           Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+            CrossAxisAlignment.start,
             children: [
               Text(
                 value,
@@ -252,20 +270,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
-        onTap: () {
-          Navigator.pushNamed(
-            context,
-            AppRoutes.adminDetail,
-            arguments: {'application': app},
-          );
-        },
+        onTap: () => _navigateToDetail(app),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+            CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment:
+                MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
                     child: Text(
@@ -278,18 +292,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
+                    padding:
+                    const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppConstants.primaryOrange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
+                      color: AppConstants.primaryOrange
+                          .withOpacity(0.1),
+                      borderRadius:
+                      BorderRadius.circular(4),
                     ),
                     child: const Text(
                       'Pending',
                       style: TextStyle(
-                        color: AppConstants.primaryOrange,
+                        color:
+                        AppConstants.primaryOrange,
                         fontSize: 12,
                       ),
                     ),
@@ -314,16 +332,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               const SizedBox(height: 8),
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment:
+                MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () {
-                      Navigator.pushNamed(
-                        context,
-                        AppRoutes.adminDetail,
-                        arguments: {'application': app},
-                      );
-                    },
+                    onPressed: () =>
+                        _navigateToDetail(app),
                     child: const Text('Review'),
                   ),
                 ],

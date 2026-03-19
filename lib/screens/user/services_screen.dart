@@ -1,6 +1,8 @@
+// lib/screens/user/services_screen.dart
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
+import '../../widgets/safe_navigation.dart';
 import '../../widgets/header_widget.dart';
 import '../../widgets/bottom_nav.dart';
 
@@ -39,32 +41,56 @@ class _ServicesScreenState extends State<ServicesScreen> {
     filteredServices = allServices;
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _filterServices(String query) {
     setState(() {
       filteredServices = allServices.where((service) {
-        final nameLower = service['name'].toLowerCase();
-        final categoryLower = service['category'].toLowerCase();
-        final searchLower = query.toLowerCase();
-
-        return nameLower.contains(searchLower) || categoryLower.contains(searchLower);
+        return service['name'].toLowerCase().contains(query.toLowerCase()) ||
+            service['category'].toLowerCase().contains(query.toLowerCase());
       }).toList();
-
-      if (selectedCategory != 'All') {
-        filteredServices = filteredServices.where((s) => s['category'] == selectedCategory).toList();
-      }
     });
   }
 
   void _filterByCategory(String category) {
     setState(() {
       selectedCategory = category;
-      filteredServices = allServices.where((s) {
-        final matchesCategory = category == 'All' || s['category'] == category;
-        final matchesSearch = _searchController.text.isEmpty ||
-            s['name'].toLowerCase().contains(_searchController.text.toLowerCase());
-        return matchesCategory && matchesSearch;
-      }).toList();
+      _filterServices(_searchController.text);
     });
+  }
+
+  void _onBottomNavTap(int index) {
+    if (index == _currentIndex) return;
+
+    setState(() => _currentIndex = index);
+
+    switch (index) {
+      case 0:
+        SafeNavigation.navigateReplacementTo(AppRoutes.home);
+        break;
+      case 1:
+        break;
+      case 2:
+        SafeNavigation.navigateReplacementTo(AppRoutes.schemesList);
+        break;
+      case 3:
+        SafeNavigation.navigateReplacementTo(AppRoutes.newsList);
+        break;
+      case 4:
+        SafeNavigation.navigateReplacementTo(AppRoutes.about);
+        break;
+    }
+  }
+
+  void _navigateToApply(String serviceName) {
+    SafeNavigation.navigateTo(
+      AppRoutes.apply,
+      arguments: {'service': serviceName},
+    );
   }
 
   @override
@@ -75,7 +101,6 @@ class _ServicesScreenState extends State<ServicesScreen> {
       appBar: const HeaderWidget(showBackButton: false),
       body: Column(
         children: [
-          // Search Bar
           Container(
             padding: const EdgeInsets.all(16),
             color: AppConstants.white,
@@ -95,8 +120,6 @@ class _ServicesScreenState extends State<ServicesScreen> {
               ),
             ),
           ),
-
-          // Category Chips
           Container(
             height: 50,
             color: AppConstants.white,
@@ -107,7 +130,6 @@ class _ServicesScreenState extends State<ServicesScreen> {
               itemBuilder: (context, index) {
                 final category = categories[index];
                 final isSelected = category == selectedCategory;
-
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
@@ -119,42 +141,22 @@ class _ServicesScreenState extends State<ServicesScreen> {
                     checkmarkColor: AppConstants.primaryBlue,
                     labelStyle: TextStyle(
                       color: isSelected ? AppConstants.primaryBlue : AppConstants.textDark,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(
-                        color: isSelected ? AppConstants.primaryBlue : AppConstants.primaryBlue.withOpacity(0.3),
-                      ),
                     ),
                   ),
                 );
               },
             ),
           ),
-
           const SizedBox(height: 8),
-
-          // Services Grid
           Expanded(
             child: filteredServices.isEmpty
                 ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.search_off,
-                    size: 64,
-                    color: AppConstants.textMedium.withOpacity(0.5),
-                  ),
+                  Icon(Icons.search_off, size: 64, color: AppConstants.textMedium.withOpacity(0.5)),
                   const SizedBox(height: 16),
-                  Text(
-                    'No services found',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppConstants.textMedium,
-                    ),
-                  ),
+                  Text('No services found', style: TextStyle(fontSize: 16, color: AppConstants.textMedium)),
                 ],
               ),
             )
@@ -170,13 +172,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
               itemBuilder: (context, index) {
                 final service = filteredServices[index];
                 return InkWell(
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.apply,
-                      arguments: {'service': service['name']},
-                    );
-                  },
+                  onTap: () => _navigateToApply(service['name']),
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppConstants.white,
@@ -192,11 +188,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                             color: service['color'].withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
-                            service['icon'],
-                            color: service['color'],
-                            size: 30,
-                          ),
+                          child: Icon(service['icon'], color: service['color'], size: 30),
                         ),
                         const SizedBox(height: 8),
                         Padding(
@@ -204,11 +196,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                           child: Text(
                             service['name'],
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: AppConstants.textDark,
-                            ),
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppConstants.textDark),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -224,29 +212,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
       ),
       bottomNavigationBar: BottomNavWidget(
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-
-          switch(index) {
-            case 0:
-              Navigator.pushReplacementNamed(context, AppRoutes.home);
-              break;
-            case 1:
-            // Already here
-              break;
-            case 2:
-              Navigator.pushReplacementNamed(context, AppRoutes.schemesList);
-              break;
-            case 3:
-              Navigator.pushReplacementNamed(context, AppRoutes.newsList);
-              break;
-            case 4:
-              Navigator.pushReplacementNamed(context, AppRoutes.about);
-              break;
-          }
-        },
+        onTap: _onBottomNavTap,
       ),
     );
   }
