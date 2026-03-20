@@ -5,6 +5,7 @@ import '../../utils/routes.dart';
 import '../../utils/argument_helper.dart';
 import '../../widgets/header_widget.dart';
 import '../../services/auth_service.dart';
+import '../../services/data_service.dart';
 import '../../widgets/safe_navigation.dart';
 
 class ApplyScreen extends StatefulWidget {
@@ -27,7 +28,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
   String? selectedGender;
   bool _agreeToTerms = false;
 
-  final List<String> services = [
+  static const List<String> _baseServices = [
     'Birth Certificate',
     'Death Certificate',
     'Marriage Certificate',
@@ -39,7 +40,19 @@ class _ApplyScreenState extends State<ApplyScreen> {
     'Voter ID',
     'PAN Card',
     'Ration Card',
+    'Property Tax',
   ];
+
+  /// All selectable services = base services + scheme titles (e.g. PM Awas Yojana)
+  List<String> get _allServices {
+    final schemeTitles =
+        DataService().getSchemes().map((s) => s.title).toList();
+    final combined = [..._baseServices];
+    for (final title in schemeTitles) {
+      if (!combined.contains(title)) combined.add(title);
+    }
+    return combined;
+  }
 
   bool _argsLoaded = false;
 
@@ -64,7 +77,11 @@ class _ApplyScreenState extends State<ApplyScreen> {
       routeName: AppRoutes.apply,
     );
     if (args != null && args.containsKey('service')) {
-      selectedService = args['service'] as String?;
+      final service = args['service'] as String?;
+      // Only set if it exists in our combined list (schemes + services)
+      if (service != null && _allServices.contains(service)) {
+        selectedService = service;
+      }
     }
   }
 
@@ -146,9 +163,15 @@ class _ApplyScreenState extends State<ApplyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const HeaderWidget(showBackButton: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(context).padding.bottom + 24,
+          ),
+          child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,15 +196,19 @@ class _ApplyScreenState extends State<ApplyScreen> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      value: selectedService,
+                      value: selectedService != null &&
+                              _allServices.contains(selectedService)
+                          ? selectedService
+                          : null,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                       ),
                       hint: const Text('Choose a service'),
-                      items: services.map((service) {
+                      items: _allServices.map((service) {
                         return DropdownMenuItem(
                           value: service,
                           child: Text(service),
@@ -284,48 +311,53 @@ class _ApplyScreenState extends State<ApplyScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
                       children: [
-                        Expanded(
+                        SizedBox(
+                          width: 100,
                           child: RadioListTile<String>(
-                            title: const Text('Male'),
+                            title: const Text('Male',
+                                style: TextStyle(fontSize: 14)),
                             value: 'Male',
                             groupValue: selectedGender,
                             onChanged: (value) {
-                              setState(() {
-                                selectedGender = value;
-                              });
+                              setState(() => selectedGender = value);
                             },
                             activeColor: AppConstants.primaryBlue,
                             contentPadding: EdgeInsets.zero,
+                            dense: true,
                           ),
                         ),
-                        Expanded(
+                        SizedBox(
+                          width: 100,
                           child: RadioListTile<String>(
-                            title: const Text('Female'),
+                            title: const Text('Female',
+                                style: TextStyle(fontSize: 14)),
                             value: 'Female',
                             groupValue: selectedGender,
                             onChanged: (value) {
-                              setState(() {
-                                selectedGender = value;
-                              });
+                              setState(() => selectedGender = value);
                             },
                             activeColor: AppConstants.primaryBlue,
                             contentPadding: EdgeInsets.zero,
+                            dense: true,
                           ),
                         ),
-                        Expanded(
+                        SizedBox(
+                          width: 100,
                           child: RadioListTile<String>(
-                            title: const Text('Other'),
+                            title: const Text('Other',
+                                style: TextStyle(fontSize: 14)),
                             value: 'Other',
                             groupValue: selectedGender,
                             onChanged: (value) {
-                              setState(() {
-                                selectedGender = value;
-                              });
+                              setState(() => selectedGender = value);
                             },
                             activeColor: AppConstants.primaryBlue,
                             contentPadding: EdgeInsets.zero,
+                            dense: true,
                           ),
                         ),
                       ],
@@ -464,6 +496,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

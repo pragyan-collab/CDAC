@@ -63,9 +63,15 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
 
     return Scaffold(
       appBar: const HeaderWidget(showBackButton: false),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(context).padding.bottom + 32,
+          ),
+          child: Column(
           children: [
             Container(
               padding: const EdgeInsets.all(20),
@@ -261,6 +267,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

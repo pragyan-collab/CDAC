@@ -65,9 +65,15 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
 
     return Scaffold(
       appBar: const HeaderWidget(showBackButton: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).padding.bottom + 24,
+          ),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
@@ -210,6 +216,7 @@ class _SchemeDetailScreenState extends State<SchemeDetailScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
