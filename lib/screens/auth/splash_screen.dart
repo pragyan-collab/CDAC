@@ -23,25 +23,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return;
 
-    try {
-      final hasSelectedLanguage =
-      await LanguageUtils().hasSelectedLanguage();
-
-      if (!mounted) return;
-
-      if (hasSelectedLanguage) {
-        // ✅ FIXED (removed context)
-        SafeNavigation.navigateReplacementTo(AppRoutes.login);
-      } else {
-        // ✅ FIXED
-        SafeNavigation.navigateReplacementTo(AppRoutes.language);
-      }
-    } catch (e) {
-      if (!mounted) return;
-
-      // ✅ FIXED
-      SafeNavigation.navigateReplacementTo(AppRoutes.language);
-    }
+    // ALWAYS open LanguageSelectionPage first as per requirement
+    SafeNavigation.navigateReplacementTo(AppRoutes.language);
   }
 
   @override

@@ -29,6 +29,8 @@ dependencies:
 
   # For device info
   device_info_plus: ^9.1.1
+  http: ^1.6.0
+  razorpay_flutter: ^1.4.1
 
 dev_dependencies:
   flutter_test:

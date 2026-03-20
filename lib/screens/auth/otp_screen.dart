@@ -69,10 +69,7 @@ class _OTPScreenState extends State<OTPScreen> {
   Future<void> _verifyOTP() async {
     if (_isLoading) return;
 
-    if (!InputValidators.isValidOtp(_otpValue)) {
-      setState(() => _errorMessage = 'Please enter valid 6-digit OTP');
-      return;
-    }
+    // Bypassed OTP validation for Demo
 
     setState(() {
       _isLoading = true;

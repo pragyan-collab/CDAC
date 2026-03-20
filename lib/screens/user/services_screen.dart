@@ -1,5 +1,6 @@
-// lib/screens/user/services_screen.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
 import '../../widgets/safe_navigation.dart';
@@ -15,52 +16,45 @@ class ServicesScreen extends StatefulWidget {
 
 class _ServicesScreenState extends State<ServicesScreen> {
   int _currentIndex = 1;
-  final TextEditingController _searchController = TextEditingController();
-
-  final List<Map<String, dynamic>> allServices = [
-    {'name': 'Birth Certificate', 'icon': Icons.child_care, 'category': 'Certificates', 'color': Colors.blue},
-    {'name': 'Death Certificate', 'icon': Icons.heart_broken, 'category': 'Certificates', 'color': Colors.grey},
-    {'name': 'Marriage Certificate', 'icon': Icons.favorite, 'category': 'Certificates', 'color': Colors.pink},
-    {'name': 'Income Certificate', 'icon': Icons.attach_money, 'category': 'Certificates', 'color': Colors.green},
-    {'name': 'Caste Certificate', 'icon': Icons.people, 'category': 'Certificates', 'color': Colors.orange},
-    {'name': 'Residence Certificate', 'icon': Icons.home, 'category': 'Certificates', 'color': Colors.brown},
-    {'name': 'Passport Application', 'icon': Icons.flight, 'category': 'Travel', 'color': Colors.indigo},
-    {'name': 'Driving License', 'icon': Icons.drive_eta, 'category': 'Transport', 'color': Colors.teal},
-    {'name': 'Voter ID', 'icon': Icons.how_to_vote, 'category': 'Identity', 'color': Colors.deepPurple},
-    {'name': 'PAN Card', 'icon': Icons.credit_card, 'category': 'Identity', 'color': Colors.amber},
-    {'name': 'Ration Card', 'icon': Icons.food_bank, 'category': 'Food', 'color': Colors.lightGreen},
-    {'name': 'Property Tax', 'icon': Icons.account_balance, 'category': 'Tax', 'color': Colors.cyan},
-  ];
-
-  List<Map<String, dynamic>> filteredServices = [];
-  String selectedCategory = 'All';
+  bool _isLoading = true;
+  List<dynamic> _services = [];
 
   @override
   void initState() {
     super.initState();
-    filteredServices = allServices;
+    _fetchServices();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  Future<void> _fetchServices() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:8000/api/service-catalog/'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (mounted) {
+          setState(() {
+            _services = data is List ? data : [];
+            _isLoading = false;
+          });
+        }
+      } else {
+        _handleError();
+      }
+    } catch (e) {
+      _handleError();
+    }
   }
 
-  void _filterServices(String query) {
-    setState(() {
-      filteredServices = allServices.where((service) {
-        return service['name'].toLowerCase().contains(query.toLowerCase()) ||
-            service['category'].toLowerCase().contains(query.toLowerCase());
-      }).toList();
-    });
-  }
-
-  void _filterByCategory(String category) {
-    setState(() {
-      selectedCategory = category;
-      _filterServices(_searchController.text);
-    });
+  void _handleError() {
+    if (mounted) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load services')),
+      );
+    }
   }
 
   void _onBottomNavTap(int index) {
@@ -86,128 +80,140 @@ class _ServicesScreenState extends State<ServicesScreen> {
     }
   }
 
-  void _navigateToApply(String serviceName) {
+  void _navigateToPayment(dynamic service) {
+    double amount =
+        double.tryParse(service['base_price']?.toString() ?? '0') ?? 0.0;
+
     SafeNavigation.navigateTo(
-      AppRoutes.apply,
-      arguments: {'service': serviceName},
+      AppRoutes.payment,
+      arguments: {
+        'serviceName': service['name'] ?? 'Service',
+        'amount': amount,
+        'applicationId':
+        'APP_${DateTime.now().millisecondsSinceEpoch}',
+      },
+    );
+  }
+
+  IconData _getIcon(String iconName) {
+    switch (iconName) {
+      case 'bolt':
+        return Icons.bolt;
+      case 'water_drop':
+        return Icons.water_drop;
+      case 'local_fire_department':
+        return Icons.local_fire_department;
+      case 'home':
+        return Icons.home;
+      case 'child_care':
+        return Icons.child_care;
+      case 'storefront':
+        return Icons.storefront;
+      default:
+        return Icons.receipt;
+    }
+  }
+
+  Widget _buildServiceCard(dynamic service) {
+    final String name = service['name'] ?? 'Unknown Service';
+    final String iconName = service['icon_name'] ?? '';
+    final double price =
+        double.tryParse(service['base_price']?.toString() ?? '0') ?? 0.0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: 3,
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: CircleAvatar(
+          backgroundColor:
+          AppConstants.primaryBlue.withOpacity(0.1),
+          child: Icon(
+            _getIcon(iconName),
+            color: AppConstants.primaryBlue,
+          ),
+        ),
+        title: Text(
+          name,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Text(
+            "Fees: ₹$price",
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        trailing: ElevatedButton(
+          onPressed: price > 0
+              ? () => _navigateToPayment(service)
+              : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppConstants.primaryBlue,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text(
+            'Pay Now',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_services.isEmpty) {
+      return const Center(
+        child: Text(
+          'No services found.\nMake sure backend is running.',
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _services.length,
+      itemBuilder: (context, index) {
+        return _buildServiceCard(_services[index]);
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final categories = ['All', ...allServices.map((s) => s['category'] as String).toSet()];
-
     return Scaffold(
       appBar: const HeaderWidget(showBackButton: false),
       body: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            color: AppConstants.white,
-            child: TextField(
-              controller: _searchController,
-              onChanged: _filterServices,
-              decoration: InputDecoration(
-                hintText: 'Search services...',
-                prefixIcon: const Icon(Icons.search, color: AppConstants.primaryBlue),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: AppConstants.pageBg,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+            width: double.infinity,
+            color: AppConstants.pageBg,
+            child: const Text(
+              'Select a Service to Pay',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppConstants.textDark,
               ),
             ),
           ),
-          Container(
-            height: 50,
-            color: AppConstants.white,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                final isSelected = category == selectedCategory;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(category),
-                    selected: isSelected,
-                    onSelected: (_) => _filterByCategory(category),
-                    backgroundColor: AppConstants.white,
-                    selectedColor: AppConstants.primaryBlue.withOpacity(0.1),
-                    checkmarkColor: AppConstants.primaryBlue,
-                    labelStyle: TextStyle(
-                      color: isSelected ? AppConstants.primaryBlue : AppConstants.textDark,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: filteredServices.isEmpty
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.search_off, size: 64, color: AppConstants.textMedium.withOpacity(0.5)),
-                  const SizedBox(height: 16),
-                  Text('No services found', style: TextStyle(fontSize: 16, color: AppConstants.textMedium)),
-                ],
-              ),
-            )
-                : GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 0.9,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: filteredServices.length,
-              itemBuilder: (context, index) {
-                final service = filteredServices[index];
-                return InkWell(
-                  onTap: () => _navigateToApply(service['name']),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppConstants.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: AppConstants.buttonShadow,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: service['color'].withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(service['icon'], color: service['color'], size: 30),
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Text(
-                            service['name'],
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppConstants.textDark),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+          Expanded(child: _buildBody()),
         ],
       ),
       bottomNavigationBar: BottomNavWidget(

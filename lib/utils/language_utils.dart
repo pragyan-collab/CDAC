@@ -38,8 +38,8 @@ class LanguageUtils {
     switch (languageCode) {
       case 'hi':
         return const Locale('hi', 'IN');
-      case 'mr':
-        return const Locale('mr', 'IN');
+      case 'or':
+        return const Locale('or', 'IN');
       default:
         return const Locale('en', 'US');
     }

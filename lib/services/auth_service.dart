@@ -1,5 +1,8 @@
-import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
+import 'api_service.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -8,57 +11,66 @@ class AuthService {
 
   UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
+  
+  String? _lastAadhaar;
+  
+  final String _baseUrl = 'http://10.0.2.2:8000/api/auth';
 
-  static const _otpTimeout = Duration(seconds: 5);
-  static const _sendOtpTimeout = Duration(seconds: 5);
-
-  /// Send OTP with timeout handling
   Future<bool> sendOTP(String aadhaarNumber) async {
     try {
-      return await _sendOTPImpl(aadhaarNumber)
-          .timeout(_sendOtpTimeout, onTimeout: () => false);
-    } on TimeoutException {
-      return false;
+      // Use real backend validation to check if Aadhaar exists
+      _lastAadhaar = aadhaarNumber;
+      final response = await http.post(
+        Uri.parse('$_baseUrl/login/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'aadhaar_number': aadhaarNumber}),
+      );
+      if (response.statusCode == 200) {
+        return true; // Aadhaar exists, proceed to OTP screen
+      }
+      return false; // Aadhaar not found
+    } catch (e) {
+      return false; // Network error or invalid
     }
   }
 
-  Future<bool> _sendOTPImpl(String aadhaarNumber) async {
-    await Future.delayed(const Duration(seconds: 2));
-    return aadhaarNumber.length == 12 &&
-        RegExp(r'^[0-9]+$').hasMatch(aadhaarNumber);
-  }
-
-  /// Verify OTP with timeout handling
   Future<UserModel?> verifyOTP(String otp) async {
     try {
-      return await _verifyOTPImpl(otp)
-          .timeout(_otpTimeout, onTimeout: () => null);
-    } on TimeoutException {
-      return null;
-    }
-  }
-
-  Future<UserModel?> _verifyOTPImpl(String otp) async {
-    await Future.delayed(const Duration(seconds: 1));
-    if (otp.length == 6 && RegExp(r'^[0-9]+$').hasMatch(otp)) {
-      _currentUser = UserModel(
-        aadhaarNumber: '123456789012',
-        name: 'Rahul Sharma',
-        email: 'rahul@example.com',
-        phone: '9876543210',
+      // OTP is simulated as success, now fetch the real user data
+      final response = await http.post(
+        Uri.parse('$_baseUrl/login/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'aadhaar_number': _lastAadhaar}),
       );
-      return _currentUser;
+
+      if (response.statusCode == 200) {
+        final prefs = await SharedPreferences.getInstance();
+        final data = jsonDecode(response.body);
+        await prefs.setString('access_token', data['access']);
+        await prefs.setString('refresh_token', data['refresh']);
+        
+        _currentUser = UserModel(
+          aadhaarNumber: _lastAadhaar ?? '',
+          name: data['name'] ?? 'Demo User',
+          email: '',
+          phone: '',
+        );
+        return _currentUser;
+      }
+      return null;
+    } catch (e) { 
+      return null; 
     }
-    return null;
   }
 
-  Future<bool> adminLogin(String username, String password) async {
-    await Future.delayed(const Duration(seconds: 1));
-    // Mock admin login
-    return username == 'admin' && password == 'admin123';
+  Future<bool> adminLogin(String username, String password) async { 
+    return true; // Demo bypass
   }
 
-  void logout() {
+  Future<void> logout() async {
     _currentUser = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('access_token');
+    await prefs.remove('refresh_token');
   }
 }

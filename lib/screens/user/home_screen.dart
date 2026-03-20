@@ -23,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Map<String, dynamic>> quickServices = [
     {'icon': Icons.description, 'label': 'Apply', 'color': AppConstants.primaryBlue, 'route': AppRoutes.apply},
     {'icon': Icons.upload_file, 'label': 'Upload', 'color': AppConstants.primaryOrange, 'route': AppRoutes.upload},
-    {'icon': Icons.payment, 'label': 'Pay', 'color': AppConstants.successGreen, 'route': AppRoutes.payment},
+    {'icon': Icons.payment, 'label': 'Pay', 'color': AppConstants.successGreen, 'route': AppRoutes.services},
     {'icon': Icons.track_changes, 'label': 'Track', 'color': Colors.purple, 'route': AppRoutes.status},
   ];
 
@@ -138,13 +138,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            ...DataService()
-                .getUserApplications(user?.aadhaarNumber ?? '')
-                .take(3)
-                .map((app) => Padding(
+            // Replaced DataService call with static or FutureBuilder placeholder for hackathon UI flow
+            Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: StatusCardWidget(application: app, onTap: null),
-            )),
+              child: const Text('No recent applications found.', style: TextStyle(color: AppConstants.textMedium)),
+            ),
             const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(16),
@@ -180,6 +178,11 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: BottomNavWidget(
         currentIndex: _currentIndex,
         onTap: _onBottomNavTap,
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _navigateToScreen(AppRoutes.chatbot),
+        backgroundColor: AppConstants.primaryBlue,
+        child: const Icon(Icons.chat_bubble, color: AppConstants.white),
       ),
     );
   }

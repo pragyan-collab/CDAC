@@ -15,6 +15,7 @@ import 'screens/user/services_screen.dart';
 import 'screens/user/apply_screen.dart';
 import 'screens/user/upload_screen.dart';
 import 'screens/user/status_screen.dart';
+import 'screens/user/chatbot_screen.dart';
 
 // Payment Screens
 import 'screens/payment/payment_screen.dart';
@@ -127,6 +128,8 @@ class _CivicKioskAppState extends State<CivicKioskApp> {
         );
       case AppRoutes.status:
         return MaterialPageRoute(builder: (_) => const StatusScreen());
+      case AppRoutes.chatbot:
+        return MaterialPageRoute(builder: (_) => const ChatbotScreen());
 
     // Payment Routes
       case AppRoutes.payment:

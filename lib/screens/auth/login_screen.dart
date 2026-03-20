@@ -52,11 +52,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final aadhaar = _getFullAadhaar();
 
-    if (!InputValidators.isValidAadhaar(aadhaar)) {
-      setState(() =>
-          _errorMessage = 'Please enter valid 12-digit Aadhaar number');
-      return;
-    }
+    // Bypassed Validation for Demo
+
 
     setState(() {
       _isLoading = true;
@@ -140,10 +137,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
+                              color: Colors.black,
                             ),
                             decoration: InputDecoration(
                               counterText: '',
                               filled: true,
+                              contentPadding: EdgeInsets.zero,
                               fillColor: _boxControllers[index]
                                   .text
                                   .isNotEmpty

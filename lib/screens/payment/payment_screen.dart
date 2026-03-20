@@ -1,4 +1,3 @@
-// lib/screens/payment/payment_screen.dart
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
@@ -15,12 +14,14 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  String selectedMethod = 'upi'; // ✅ default selected
+  String selectedMethod = 'upi';
   bool _isProcessing = false;
 
   double amount = 0.0;
   String serviceName = '';
   String applicationId = '';
+
+  bool _argsLoaded = false;
 
   final List<Map<String, dynamic>> paymentMethods = [
     {
@@ -49,8 +50,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
     },
   ];
 
-  bool _argsLoaded = false;
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -78,7 +77,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _processPayment() async {
-    if (_isProcessing) return; // ✅ prevent double click
+    if (_isProcessing) return;
 
     if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -93,52 +92,33 @@ class _PaymentScreenState extends State<PaymentScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      if (selectedMethod == 'upi') {
-        final paymentLink =
-        await PaymentService().initiatePayment(amount, applicationId);
+      await Future.delayed(const Duration(seconds: 2));
 
-        if (!mounted) return;
+      final success =
+      await PaymentService().verifyPayment('dummy_payment_id');
 
-        setState(() => _isProcessing = false);
+      if (!mounted) return;
 
-        SafeNavigation.navigateTo(
-          AppRoutes.paymentWebview,
+      setState(() => _isProcessing = false);
+
+      if (success) {
+        final receiptId = await PaymentService().generateReceipt(
+          'dummy_payment_id',
+          amount,
+          applicationId,
+        );
+
+        SafeNavigation.navigateReplacementTo(
+          AppRoutes.receipt,
           arguments: {
-            'paymentLink': paymentLink,
+            'receiptId': receiptId,
             'amount': amount,
+            'serviceName': serviceName,
             'applicationId': applicationId,
           },
         );
       } else {
-        // Simulate processing
-        await Future.delayed(const Duration(seconds: 2));
-
-        final success =
-        await PaymentService().verifyPayment('dummy_payment_id');
-
-        if (!mounted) return;
-
-        setState(() => _isProcessing = false);
-
-        if (success) {
-          final receiptId = await PaymentService().generateReceipt(
-            'dummy_payment_id',
-            amount,
-            applicationId,
-          );
-
-          SafeNavigation.navigateReplacementTo(
-            AppRoutes.receipt,
-            arguments: {
-              'receiptId': receiptId,
-              'amount': amount,
-              'serviceName': serviceName,
-              'applicationId': applicationId,
-            },
-          );
-        } else {
-          _showError('Payment failed. Please try again.');
-        }
+        _showError('Payment failed. Please try again.');
       }
     } catch (e) {
       if (mounted) {
@@ -162,6 +142,118 @@ class _PaymentScreenState extends State<PaymentScreen> {
   void dispose() {
     ArgumentHelper.clearArguments(AppRoutes.payment);
     super.dispose();
+  }
+
+  Widget _buildAmountCard() {
+    return Container(
+      width: double.infinity, // ✅ FULL WIDTH FIX
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            AppConstants.primaryBlue,
+            AppConstants.primaryBlueDark
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppConstants.buttonShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center, // ✅ CENTER CONTENT
+        children: [
+          const Text(
+            'Total Amount',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppConstants.white,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '₹${amount.toStringAsFixed(2)}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppConstants.white,
+              fontSize: 40,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'For: $serviceName',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppConstants.white,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethods() {
+    return Column(
+      children: paymentMethods.map((method) {
+        final isSelected = selectedMethod == method['id'];
+
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              selectedMethod = method['id'];
+            });
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppConstants.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected
+                    ? AppConstants.primaryBlue
+                    : Colors.grey.shade300,
+                width: isSelected ? 2 : 1,
+              ),
+              boxShadow:
+              isSelected ? AppConstants.buttonShadow : null,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: method['color'].withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    method['icon'],
+                    color: method['color'],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    method['name'],
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                if (isSelected)
+                  const Icon(
+                    Icons.check_circle,
+                    color: AppConstants.primaryBlue,
+                  ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
   }
 
   @override
@@ -191,50 +283,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
           : SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
           children: [
-            // 💳 Amount Card
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    AppConstants.primaryBlue,
-                    AppConstants.primaryBlueDark
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: AppConstants.buttonShadow,
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    'Total Amount',
-                    style: TextStyle(
-                      color: AppConstants.white,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '₹${amount.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      color: AppConstants.white,
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'For: $serviceName',
-                    style: const TextStyle(
-                      color: AppConstants.white,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildAmountCard(),
 
             const SizedBox(height: 30),
 
@@ -249,78 +301,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
             const SizedBox(height: 20),
 
-            // 💳 Payment Methods
-            ...paymentMethods.map((method) {
-              final isSelected = selectedMethod == method['id'];
-
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    selectedMethod = method['id'];
-                  });
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppConstants.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppConstants.primaryBlue
-                          : Colors.grey.shade300,
-                      width: isSelected ? 2 : 1,
-                    ),
-                    boxShadow:
-                    isSelected ? AppConstants.buttonShadow : null,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: method['color'].withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          method['icon'],
-                          color: method['color'],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          method['name'],
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      if (isSelected)
-                        const Icon(Icons.check_circle,
-                            color: AppConstants.primaryBlue),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
+            _buildPaymentMethods(),
 
             const SizedBox(height: 20),
 
-            // 🔐 Security Note
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color:
-                AppConstants.primaryBlue.withOpacity(0.08),
+                color: AppConstants.primaryBlue
+                    .withOpacity(0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Row(
                 children: [
                   Icon(Icons.lock,
-                      color: AppConstants.primaryBlue),
+                      color:
+                      AppConstants.primaryBlue),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -333,15 +329,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
             const SizedBox(height: 30),
 
-            // ✅ Pay Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isProcessing ? null : _processPayment,
+                onPressed: _isProcessing
+                    ? null
+                    : _processPayment,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.successGreen,
+                  backgroundColor:
+                  AppConstants.successGreen,
                   padding:
-                  const EdgeInsets.symmetric(vertical: 16),
+                  const EdgeInsets.symmetric(
+                      vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius:
                     BorderRadius.circular(12),

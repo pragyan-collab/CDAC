@@ -85,6 +85,7 @@ class OtpInputWidgetState extends State<OtpInputWidget> {
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
+              color: Colors.black,
             ),
             decoration: InputDecoration(
               counterText: '',

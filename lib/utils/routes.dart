@@ -11,6 +11,7 @@ class AppRoutes {
   static const String apply = '/apply';
   static const String upload = '/upload';
   static const String status = '/status';
+  static const String chatbot = '/chatbot';
 
   // Payment Routes
   static const String payment = '/payment';
