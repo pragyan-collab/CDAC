@@ -107,6 +107,7 @@ class _StatusScreenState extends State<StatusScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(120),
         child: Column(
@@ -134,13 +135,19 @@ class _StatusScreenState extends State<StatusScreen> with TickerProviderStateMix
         isBusy: _isBusy,
         message: 'Loading...',
         child: SafeArea(
-          child: TabBarView(
-            controller: _tabController,
+          child: Column(
             children: [
-              _buildApplicationList(context, allApplications),
-              _buildApplicationList(context, pendingApplications),
-              _buildApplicationList(context, approvedApplications),
-              _buildApplicationList(context, rejectedApplications),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildApplicationList(context, allApplications),
+                    _buildApplicationList(context, pendingApplications),
+                    _buildApplicationList(context, approvedApplications),
+                    _buildApplicationList(context, rejectedApplications),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -154,33 +161,34 @@ class _StatusScreenState extends State<StatusScreen> with TickerProviderStateMix
 
   Widget _buildApplicationList(
       BuildContext context, List<ApplicationModel> applications) {
-    final bottomPadding =
-        MediaQuery.of(context).padding.bottom + kBottomNavigationBarHeight + 16;
+    final bottomPadding = MediaQuery.of(context).padding.bottom + 16;
 
     if (applications.isEmpty) {
-      return SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minHeight: MediaQuery.of(context).size.height * 0.6,
-          ),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.inbox, size: 80, color: Colors.grey),
-                const SizedBox(height: 16),
-                const Text('No applications found',
-                    style: TextStyle(fontSize: 16)),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: _isBusy ? null : _navigateToServices,
-                  child: const Text('Apply for Service'),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.inbox, size: 80, color: Colors.grey),
+                    const SizedBox(height: 16),
+                    const Text('No applications found',
+                        style: TextStyle(fontSize: 16)),
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: _isBusy ? null : _navigateToServices,
+                      child: const Text('Apply for Service'),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       );
     }
 
