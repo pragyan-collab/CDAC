@@ -109,8 +109,9 @@ class _StatusScreenState extends State<StatusScreen> with TickerProviderStateMix
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(120),
+        preferredSize: const Size.fromHeight(148), // Changed from 128 to 148 to fix overflow
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             const HeaderWidget(showBackButton: false),
             Container(

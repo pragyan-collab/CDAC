@@ -135,7 +135,7 @@ class _AboutScreenState extends State<AboutScreen> {
             const SizedBox(height: 24),
 
             const Text(
-              '© 2024 All Rights Reserved',
+              '© 2026 All Rights Reserved',
               style: TextStyle(
                 fontSize: 10,
                 color: AppConstants.textMedium,
