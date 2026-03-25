@@ -23,8 +23,27 @@ class ApiService {
   List<SchemeModel> getSchemes() {
     return [
       SchemeModel(
-        id: 'SCM001', title: 'PM Awas Yojana', description: 'Housing', eligibility: '', benefits: '', documents: '', applicationProcess: '', department: 'Ministry', lastDate: DateTime.now(),
-      )
+        id: 'SCM001',
+        title: 'PM Kisan',
+        description: 'Financial assistance for farmers',
+        eligibility: 'Small and marginal farmers',
+        benefits: 'Regular income support',
+        documents: 'Aadhaar, KYC documents',
+        applicationProcess: 'Apply via official portal',
+        department: 'Department of Agriculture',
+        lastDate: DateTime.now().add(const Duration(days: 60)),
+      ),
+      SchemeModel(
+        id: 'SCM002',
+        title: 'Ayushman Bharat',
+        description: 'Health insurance coverage for eligible families',
+        eligibility: 'As per government eligibility criteria',
+        benefits: 'Cashless healthcare services',
+        documents: 'Aadhaar, eligibility proof',
+        applicationProcess: 'Apply/verify via portal',
+        department: 'Ministry of Health',
+        lastDate: DateTime.now().add(const Duration(days: 45)),
+      ),
     ];
   }
 

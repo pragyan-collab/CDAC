@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
 import '../../widgets/safe_navigation.dart';
@@ -9,6 +7,7 @@ import '../../widgets/bottom_nav.dart';
 import '../../widgets/kiosk_busy_overlay.dart';
 import '../../widgets/skeleton/kiosk_skeleton_card.dart';
 import '../../widgets/skeleton/kiosk_skeleton_list.dart';
+import '../../services/service_catalog_service.dart';
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({Key? key}) : super(key: key);
@@ -21,7 +20,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
   int _currentIndex = 1;
   bool _isLoading = true;
   bool _isBusy = false;
-  List<dynamic> _services = [];
+  List<ServiceCatalogItem> _services = [];
 
   @override
   void initState() {
@@ -30,34 +29,36 @@ class _ServicesScreenState extends State<ServicesScreen> {
   }
 
   Future<void> _fetchServices() async {
+    setState(() => _isLoading = true);
+
+    final catalog = ServiceCatalogService();
     try {
-      final response = await http.get(
-        Uri.parse('http://10.0.2.2:8000/api/service-catalog/'),
-      );
+      final offlineFallback = catalog.getOfflineServices();
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      final items = await Future.any<List<ServiceCatalogItem>>([
+        catalog.getServices(timeout: const Duration(seconds: 4)),
+        Future.delayed(
+          const Duration(seconds: 6),
+          () => offlineFallback,
+        ),
+      ]);
 
-        if (mounted) {
-          setState(() {
-            _services = data is List ? data : [];
-            _isLoading = false;
-          });
-        }
-      } else {
-        _handleError();
+      if (!mounted) return;
+      setState(() {
+        _services = items;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _services = catalog.getOfflineServices();
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Showing offline services')),
+        );
       }
-    } catch (e) {
-      _handleError();
-    }
-  }
-
-  void _handleError() {
-    if (mounted) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to load services')),
-      );
     }
   }
 
@@ -121,11 +122,10 @@ class _ServicesScreenState extends State<ServicesScreen> {
     }
   }
 
-  Widget _buildServiceCard(dynamic service) {
-    final String name = service['name'] ?? 'Unknown Service';
-    final String iconName = service['icon_name'] ?? '';
-    final double price =
-        double.tryParse(service['base_price']?.toString() ?? '0') ?? 0.0;
+  Widget _buildServiceCard(ServiceCatalogItem service) {
+    final String name = service.name;
+    final String iconName = service.iconKey;
+    final double price = service.price;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -143,6 +143,14 @@ class _ServicesScreenState extends State<ServicesScreen> {
             color: AppConstants.primaryBlue,
           ),
         ),
+        onTap: _isBusy
+            ? null
+            : () => _runBusyNavigation(() async {
+                  await SafeNavigation.navigateTo(
+                    AppRoutes.apply,
+                    arguments: {'service': name},
+                  );
+                }),
         title: Text(
           name,
           style: const TextStyle(
@@ -153,7 +161,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 8.0),
           child: Text(
-            "Fees: ₹$price",
+            "Fees: ₹${price.toStringAsFixed(0)}",
             style: const TextStyle(
               fontWeight: FontWeight.w500,
             ),
@@ -178,7 +186,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
     if (_services.isEmpty) {
       return const Center(
         child: Text(
-          'No services found.\nMake sure backend is running.',
+          'No services available right now.',
           textAlign: TextAlign.center,
         ),
       );
@@ -217,14 +225,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 ),
               ),
               Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).padding.bottom +
-                        kBottomNavigationBarHeight +
-                        8,
-                  ),
-                  child: _buildBody(),
-                ),
+                child: _buildBody(),
               ),
             ],
           ),

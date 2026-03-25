@@ -51,7 +51,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Map<String, dynamic>> quickServices = [
     {'icon': Icons.description, 'label': 'Apply', 'color': AppConstants.primaryBlue, 'route': AppRoutes.apply},
-    {'icon': Icons.upload_file, 'label': 'Upload', 'color': AppConstants.primaryOrange, 'route': AppRoutes.upload},
     {'icon': Icons.payment, 'label': 'Pay', 'color': AppConstants.successGreen, 'route': AppRoutes.pay},
     {'icon': Icons.track_changes, 'label': 'Track', 'color': Colors.purple, 'route': AppRoutes.status},
   ];
@@ -164,46 +163,46 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: AppConstants.textDark),
                 ),
                 const SizedBox(height: 16),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final width = constraints.maxWidth;
-                    final crossAxisCount =
-                        (width / 140).floor().clamp(2, 4).toInt();
-
-                    return GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: crossAxisCount,
-                      children: quickServices.map((service) {
-                        return InkWell(
-                          onTap: _isBusy
-                              ? null
-                              : () => _runBusyNavigation(
-                                    () =>
-                                        _navigateToScreen(service['route']),
-                                  ),
-                          child: Column(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: service['color'].withOpacity(0.1),
-                                  shape: BoxShape.circle,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: quickServices.map((service) {
+                    return Expanded(
+                      child: InkWell(
+                        onTap: _isBusy
+                            ? null
+                            : () => _runBusyNavigation(
+                                  () => _navigateToScreen(service['route']),
                                 ),
-                                child: Icon(service['icon'],
-                                    color: service['color'], size: 28),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: (service['color'] as Color).withOpacity(0.1),
+                                shape: BoxShape.circle,
                               ),
-                              const SizedBox(height: 4),
-                              Text(service['label'],
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppConstants.textDark)),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                              child: Icon(
+                                service['icon'] as IconData,
+                                color: service['color'],
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              service['label'] as String,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppConstants.textDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     );
-                  },
+                  }).toList(),
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -286,7 +285,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             Text(
-                              'PM Awas Yojana - Apply now',
+                              'PM Kisan - Apply now',
                               style: TextStyle(
                                 color: AppConstants.white,
                                 fontSize: 14,

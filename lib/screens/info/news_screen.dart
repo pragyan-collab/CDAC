@@ -30,9 +30,9 @@ class _NewsScreenState extends State<NewsScreen> with SingleTickerProviderStateM
     },
     {
       'id': 2,
-      'title': 'PM Awas Yojana Deadline Extended',
-      'summary': 'Last date for PM Awas Yojana applications extended to 31st December',
-      'content': 'In a major relief to applicants, the government has extended the deadline for PM Awas Yojana...',
+      'title': 'PM Kisan Deadline Extended',
+      'summary': 'Last date for PM Kisan applications extended to 31st December',
+      'content': 'In a major relief to applicants, the government has extended the deadline for PM Kisan...',
       'date': '14 Mar 2024',
       'category': 'Scheme',
       'image': Icons.home,

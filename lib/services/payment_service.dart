@@ -33,6 +33,7 @@ class PaymentService {
 
   Future<String> generateReceipt(String paymentId, double amount, String orderId) async {
     await Future.delayed(const Duration(seconds: 1));
-    return 'RECEIPT_\${DateTime.now().millisecondsSinceEpoch}';
+    final receiptNo = 'RECEIPT_${DateTime.now().millisecondsSinceEpoch}';
+    return receiptNo;
   }
 }

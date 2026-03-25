@@ -133,14 +133,16 @@ class _StatusScreenState extends State<StatusScreen> with TickerProviderStateMix
       body: KioskBusyOverlay(
         isBusy: _isBusy,
         message: 'Loading...',
-        child: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildApplicationList(allApplications),
-            _buildApplicationList(pendingApplications),
-            _buildApplicationList(approvedApplications),
-            _buildApplicationList(rejectedApplications),
-          ],
+        child: SafeArea(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildApplicationList(context, allApplications),
+              _buildApplicationList(context, pendingApplications),
+              _buildApplicationList(context, approvedApplications),
+              _buildApplicationList(context, rejectedApplications),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: BottomNavWidget(
@@ -150,27 +152,40 @@ class _StatusScreenState extends State<StatusScreen> with TickerProviderStateMix
     );
   }
 
-  Widget _buildApplicationList(List<ApplicationModel> applications) {
+  Widget _buildApplicationList(
+      BuildContext context, List<ApplicationModel> applications) {
+    final bottomPadding =
+        MediaQuery.of(context).padding.bottom + kBottomNavigationBarHeight + 16;
+
     if (applications.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.inbox, size: 80, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text('No applications found', style: TextStyle(fontSize: 16)),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: _isBusy ? null : _navigateToServices,
-              child: const Text('Apply for Service'),
+      return SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height * 0.6,
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.inbox, size: 80, color: Colors.grey),
+                const SizedBox(height: 16),
+                const Text('No applications found',
+                    style: TextStyle(fontSize: 16)),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: _isBusy ? null : _navigateToServices,
+                  child: const Text('Apply for Service'),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
       itemCount: applications.length,
       itemBuilder: (context, index) {
         return Padding(
@@ -188,23 +203,32 @@ class _StatusScreenState extends State<StatusScreen> with TickerProviderStateMix
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(app.serviceName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            Text('Status: ${app.statusText}'),
-            Text('Application ID: ${app.id}'),
-            if (app.status == ApplicationStatus.paymentPending) ...[
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _isBusy ? null : () => _navigateToPayment(app),
-                child: const Text('Complete Payment'),
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                app.serviceName,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
+              const SizedBox(height: 10),
+              Text('Status: ${app.statusText}'),
+              Text('Application ID: ${app.id}'),
+              if (app.status == ApplicationStatus.paymentPending) ...[
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _isBusy ? null : () => _navigateToPayment(app),
+                  child: const Text('Complete Payment'),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

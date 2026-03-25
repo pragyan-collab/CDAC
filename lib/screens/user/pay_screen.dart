@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
@@ -9,7 +6,7 @@ import '../../widgets/safe_navigation.dart';
 import '../../widgets/header_widget.dart';
 import '../../widgets/kiosk_busy_overlay.dart';
 import '../../widgets/skeleton/kiosk_skeleton_card.dart';
-import '../../widgets/skeleton/kiosk_skeleton_list.dart';
+import '../../services/service_catalog_service.dart';
 
 class PayScreen extends StatefulWidget {
   const PayScreen({Key? key}) : super(key: key);
@@ -22,7 +19,7 @@ class _PayScreenState extends State<PayScreen> {
   bool _isBusy = false;
   bool _isLoading = true;
 
-  List<dynamic> _services = [];
+  List<ServiceCatalogItem> _services = [];
   int _selectedIndex = -1;
 
   @override
@@ -32,33 +29,43 @@ class _PayScreenState extends State<PayScreen> {
   }
 
   Future<void> _fetchServices() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final catalog = ServiceCatalogService();
     try {
-      final response = await http.get(
-        Uri.parse('http://10.0.2.2:8000/api/service-catalog/'),
-      );
+      final offlineFallback = catalog.getOfflineServices();
+      final items = await Future.any<List<ServiceCatalogItem>>([
+        catalog.getServices(timeout: const Duration(seconds: 4)),
+        Future.delayed(
+          const Duration(seconds: 6),
+          () => offlineFallback,
+        ),
+      ]);
 
       if (!mounted) return;
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _services = data is List ? data : [];
-          _isLoading = false;
-        });
-      } else {
-        _handleError();
+      setState(() {
+        _services = items;
+        _selectedIndex = items.isNotEmpty ? 0 : -1;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _services = catalog.getOfflineServices();
+        _selectedIndex = _services.isNotEmpty ? 0 : -1;
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Showing offline service list'),
+          ),
+        );
       }
-    } catch (e) {
-      _handleError();
     }
-  }
-
-  void _handleError() {
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Failed to load services')),
-    );
   }
 
   Future<void> _runBusyAction(Future<void> Function() action) async {
@@ -74,12 +81,8 @@ class _PayScreenState extends State<PayScreen> {
     }
   }
 
-  double _getAmountFromService(dynamic service) {
-    return double.tryParse(service['base_price']?.toString() ?? '0') ?? 0.0;
-  }
-
-  IconData _getIcon(String iconName) {
-    switch (iconName) {
+  IconData _getIcon(String iconKey) {
+    switch (iconKey) {
       case 'bolt':
         return Icons.bolt;
       case 'water_drop':
@@ -109,8 +112,8 @@ class _PayScreenState extends State<PayScreen> {
     }
 
     final service = _services[_selectedIndex];
-    final amount = _getAmountFromService(service);
-    if (amount <= 0) {
+    final amount = service.price;
+    if (amount <= 0.0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('This service is not available for payment'),
@@ -124,7 +127,7 @@ class _PayScreenState extends State<PayScreen> {
       await SafeNavigation.navigateTo(
         AppRoutes.payment,
         arguments: {
-          'serviceName': service['name'] ?? 'Service',
+          'serviceName': service.name,
           'amount': amount,
           'applicationId': 'APP_${DateTime.now().millisecondsSinceEpoch}',
         },
@@ -132,10 +135,10 @@ class _PayScreenState extends State<PayScreen> {
     });
   }
 
-  Widget _buildServiceCard(dynamic service, int index) {
-    final name = service['name'] ?? 'Unknown Service';
-    final iconName = service['icon_name'] ?? '';
-    final price = _getAmountFromService(service);
+  Widget _buildServiceCard(ServiceCatalogItem service, int index) {
+    final name = service.name;
+    final iconName = service.iconKey;
+    final price = service.price;
     final isSelected = index == _selectedIndex;
 
     return Card(
@@ -173,9 +176,12 @@ class _PayScreenState extends State<PayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canPay = _selectedIndex >= 0 &&
-        _selectedIndex < _services.length &&
-        _getAmountFromService(_services[_selectedIndex]) > 0;
+    final ServiceCatalogItem? selected = (_selectedIndex >= 0 &&
+            _selectedIndex < _services.length)
+        ? _services[_selectedIndex]
+        : null;
+
+    final canPay = selected != null && selected.price > 0.0;
 
     return Scaffold(
       appBar: const HeaderWidget(showBackButton: true),
@@ -183,7 +189,7 @@ class _PayScreenState extends State<PayScreen> {
         isBusy: _isBusy,
         message: 'Processing...',
         child: SafeArea(
-          child: SingleChildScrollView(
+          child: Padding(
             padding: EdgeInsets.only(
               left: 24,
               right: 24,
@@ -202,35 +208,34 @@ class _PayScreenState extends State<PayScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (_isLoading)
-                  KioskSkeletonList(
-                    itemCount: 6,
-                    itemBuilder: (context, index) =>
-                        const KioskSkeletonServiceCard(),
-                  )
-                else if (_services.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 24),
-                    child: Text(
-                      'No services available. Please try again later.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: AppConstants.textMedium),
-                    ),
-                  )
-                else
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _services.length,
-                    itemBuilder: (context, index) =>
-                        _buildServiceCard(_services[index], index),
-                  ),
+                Expanded(
+                  child: _isLoading
+                      ? ListView.builder(
+                          itemCount: 6,
+                          itemBuilder: (context, index) {
+                            return const KioskSkeletonServiceCard();
+                          },
+                        )
+                      : _services.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No services available. Please try again later.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: AppConstants.textMedium),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: _services.length,
+                              itemBuilder: (context, index) {
+                                return _buildServiceCard(_services[index], index);
+                              },
+                            ),
+                ),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed:
-                        (_isBusy || _isLoading || !canPay) ? null : _onPayPressed,
+                    onPressed: (_isBusy || _isLoading || !canPay) ? null : _onPayPressed,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppConstants.successGreen,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -240,7 +245,7 @@ class _PayScreenState extends State<PayScreen> {
                     ),
                     child: Text(
                       canPay
-                          ? 'Pay ₹${_getAmountFromService(_services[_selectedIndex]).toStringAsFixed(2)}'
+                          ? 'Pay ₹${selected.price.toStringAsFixed(2)}'
                           : 'Pay',
                       style: const TextStyle(
                         fontSize: 18,

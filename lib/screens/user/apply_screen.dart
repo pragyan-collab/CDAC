@@ -5,7 +5,7 @@ import '../../utils/routes.dart';
 import '../../utils/argument_helper.dart';
 import '../../widgets/header_widget.dart';
 import '../../services/auth_service.dart';
-import '../../services/data_service.dart';
+import '../../services/service_catalog_service.dart';
 import '../../widgets/safe_navigation.dart';
 
 class ApplyScreen extends StatefulWidget {
@@ -28,37 +28,15 @@ class _ApplyScreenState extends State<ApplyScreen> {
   String? selectedGender;
   bool _agreeToTerms = false;
 
-  static const List<String> _baseServices = [
-    'Birth Certificate',
-    'Death Certificate',
-    'Marriage Certificate',
-    'Income Certificate',
-    'Caste Certificate',
-    'Residence Certificate',
-    'Passport Application',
-    'Driving License',
-    'Voter ID',
-    'PAN Card',
-    'Ration Card',
-    'Property Tax',
-  ];
-
-  /// All selectable services = base services + scheme titles (e.g. PM Awas Yojana)
-  List<String> get _allServices {
-    final schemeTitles =
-        DataService().getSchemes().map((s) => s.title).toList();
-    final combined = [..._baseServices];
-    for (final title in schemeTitles) {
-      if (!combined.contains(title)) combined.add(title);
-    }
-    return combined;
-  }
+  late final List<String> _allServices;
 
   bool _argsLoaded = false;
 
   @override
   void initState() {
     super.initState();
+    // Centralized service list to keep Apply/Pay/Services consistent.
+    _allServices = ServiceCatalogService().getSelectableServiceTitles();
     _prefillUserData();
   }
 
@@ -311,56 +289,77 @@ class _ApplyScreenState extends State<ApplyScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: [
-                        SizedBox(
-                          width: 100,
-                          child: RadioListTile<String>(
-                            title: const Text('Male',
-                                style: TextStyle(fontSize: 14)),
-                            value: 'Male',
-                            groupValue: selectedGender,
-                            onChanged: (value) {
-                              setState(() => selectedGender = value);
-                            },
-                            activeColor: AppConstants.primaryBlue,
-                            contentPadding: EdgeInsets.zero,
-                            dense: true,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 100,
-                          child: RadioListTile<String>(
-                            title: const Text('Female',
-                                style: TextStyle(fontSize: 14)),
-                            value: 'Female',
-                            groupValue: selectedGender,
-                            onChanged: (value) {
-                              setState(() => selectedGender = value);
-                            },
-                            activeColor: AppConstants.primaryBlue,
-                            contentPadding: EdgeInsets.zero,
-                            dense: true,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 100,
-                          child: RadioListTile<String>(
-                            title: const Text('Other',
-                                style: TextStyle(fontSize: 14)),
-                            value: 'Other',
-                            groupValue: selectedGender,
-                            onChanged: (value) {
-                              setState(() => selectedGender = value);
-                            },
-                            activeColor: AppConstants.primaryBlue,
-                            contentPadding: EdgeInsets.zero,
-                            dense: true,
-                          ),
-                        ),
-                      ],
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final fontSize =
+                            constraints.maxWidth < 360 ? 12.0 : 14.0;
+
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    'Male',
+                                    style: TextStyle(fontSize: fontSize),
+                                  ),
+                                ),
+                                value: 'Male',
+                                groupValue: selectedGender,
+                                onChanged: (value) {
+                                  setState(() => selectedGender = value);
+                                },
+                                activeColor: AppConstants.primaryBlue,
+                                contentPadding: EdgeInsets.zero,
+                                dense: true,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    'Female',
+                                    style: TextStyle(fontSize: fontSize),
+                                  ),
+                                ),
+                                value: 'Female',
+                                groupValue: selectedGender,
+                                onChanged: (value) {
+                                  setState(() => selectedGender = value);
+                                },
+                                activeColor: AppConstants.primaryBlue,
+                                contentPadding: EdgeInsets.zero,
+                                dense: true,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    'Other',
+                                    style: TextStyle(fontSize: fontSize),
+                                  ),
+                                ),
+                                value: 'Other',
+                                groupValue: selectedGender,
+                                onChanged: (value) {
+                                  setState(() => selectedGender = value);
+                                },
+                                activeColor: AppConstants.primaryBlue,
+                                contentPadding: EdgeInsets.zero,
+                                dense: true,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),

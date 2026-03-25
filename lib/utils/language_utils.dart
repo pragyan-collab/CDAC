@@ -10,7 +10,7 @@ class LanguageUtils {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_selectedLanguage, languageCode);
     } catch (e) {
-      print('Error setting language: $e');
+      // Ignore in production kiosk mode.
     }
   }
 
@@ -19,7 +19,7 @@ class LanguageUtils {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString(_selectedLanguage) ?? 'en';
     } catch (e) {
-      print('Error getting language: $e');
+      // Ignore in production kiosk mode.
       return 'en';
     }
   }
@@ -29,7 +29,7 @@ class LanguageUtils {
       final prefs = await SharedPreferences.getInstance();
       return prefs.containsKey(_selectedLanguage);
     } catch (e) {
-      print('Error checking language: $e');
+      // Ignore in production kiosk mode.
       return false;
     }
   }

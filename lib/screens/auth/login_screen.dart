@@ -125,70 +125,73 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: Column(
                   children: [
-                    Row(
-                      mainAxisAlignment:
-                      MainAxisAlignment.spaceEvenly,
-                      children: List.generate(12, (index) {
-                        return SizedBox(
-                          width: 28,
-                          height: 48,
-                          child: TextField(
-                            controller: _boxControllers[index],
-                            focusNode: _focusNodes[index],
-                            keyboardType: TextInputType.number,
-                            textAlign: TextAlign.center,
-                            maxLength: 1,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                            decoration: InputDecoration(
-                              counterText: '',
-                              filled: true,
-                              contentPadding: EdgeInsets.zero,
-                              fillColor: _boxControllers[index]
-                                  .text
-                                  .isNotEmpty
-                                  ? AppConstants.primaryBlue
-                                  .withOpacity(0.1)
-                                  : Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius:
-                                BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: index == 3 || index == 7
-                                      ? AppConstants.primaryOrange
-                                      : AppConstants.primaryBlue,
-                                  width: 1.5,
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final boxWidth =
+                            (constraints.maxWidth / 12).clamp(18.0, 28.0);
+                        final boxHeight = boxWidth * (48 / 28);
+
+                        return Wrap(
+                          spacing: 8,
+                          runSpacing: 10,
+                          alignment: WrapAlignment.center,
+                          children: List.generate(12, (index) {
+                            return SizedBox(
+                              width: boxWidth,
+                              height: boxHeight,
+                              child: TextField(
+                                controller: _boxControllers[index],
+                                focusNode: _focusNodes[index],
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                maxLength: 1,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
                                 ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius:
-                                BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: index == 3 || index == 7
-                                      ? AppConstants.primaryOrange
-                                      : AppConstants.primaryBlue
-                                      .withOpacity(0.5),
+                                decoration: InputDecoration(
+                                  counterText: '',
+                                  filled: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  fillColor:
+                                      _boxControllers[index].text.isNotEmpty
+                                          ? AppConstants.primaryBlue.withOpacity(0.1)
+                                          : Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: index == 3 || index == 7
+                                          ? AppConstants.primaryOrange
+                                          : AppConstants.primaryBlue,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: index == 3 || index == 7
+                                          ? AppConstants.primaryOrange
+                                          : AppConstants.primaryBlue.withOpacity(0.5),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: index == 3 || index == 7
+                                          ? AppConstants.primaryOrange
+                                          : AppConstants.primaryBlue,
+                                      width: 2,
+                                    ),
+                                  ),
                                 ),
+                                onChanged: (value) =>
+                                    _onAadhaarChanged(value, index),
                               ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius:
-                                BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: index == 3 || index == 7
-                                      ? AppConstants.primaryOrange
-                                      : AppConstants.primaryBlue,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                            onChanged: (value) =>
-                                _onAadhaarChanged(value, index),
-                          ),
+                            );
+                          }),
                         );
-                      }),
+                      },
                     ),
                     const SizedBox(height: 20),
 

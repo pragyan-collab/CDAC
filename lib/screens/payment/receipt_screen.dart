@@ -217,7 +217,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                           ),
                           const SizedBox(height: 8),
                           Container(
-                            width: 150,
+                            width: MediaQuery.of(context).size.width * 0.45,
                             height: 2,
                             color: AppConstants.textDark,
                           ),
@@ -304,19 +304,30 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
+          Flexible(
+            flex: 1,
+            child: Text(
             label,
             style: TextStyle(
               color: AppConstants.textMedium,
               fontSize: 14,
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              color: AppConstants.textDark,
-              fontSize: 14,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            flex: 2,
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppConstants.textDark,
+                fontSize: 14,
+                fontWeight:
+                    isBold ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
           ),
         ],
