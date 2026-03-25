@@ -48,7 +48,7 @@ class AppConstants {
 }
 
 class AppStrings {
-  static const String appName = 'Civic Kiosk';
+  static const String appName = 'JanSeva';
   static const String tagline = 'सुविधा आपके द्वार';
 
   // Auth

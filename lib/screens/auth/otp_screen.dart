@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
 import '../../utils/argument_helper.dart';
-import '../../utils/input_validators.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/safe_navigation.dart';
 import '../../widgets/header_widget.dart';
@@ -69,8 +68,6 @@ class _OTPScreenState extends State<OTPScreen> {
   Future<void> _verifyOTP() async {
     if (_isLoading) return;
 
-    // Bypassed OTP validation for Demo
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -95,7 +92,7 @@ class _OTPScreenState extends State<OTPScreen> {
       } else {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Invalid OTP';
+          _errorMessage = 'Invalid OTP or Aadhaar not authorized';
         });
       }
     } catch (e) {
@@ -113,18 +110,22 @@ class _OTPScreenState extends State<OTPScreen> {
       setState(() {
         _canResend = false;
         _timerSeconds = 30;
+        _isLoading = true;
+        _errorMessage = null;
       });
 
       _startTimer();
 
-      if (mounted) {
+      Future.delayed(const Duration(milliseconds: 600)).then((_) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('OTP resent successfully'),
             backgroundColor: AppConstants.successGreen,
           ),
         );
-      }
+      });
     }
   }
 
@@ -223,7 +224,7 @@ class _OTPScreenState extends State<OTPScreen> {
                         ),
                         if (_canResend)
                           TextButton(
-                            onPressed: _resendOTP,
+                            onPressed: _canResend && !_isLoading ? _resendOTP : null,
                             child: const Text(
                               'Resend',
                               style: TextStyle(
@@ -238,7 +239,7 @@ class _OTPScreenState extends State<OTPScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _verifyOTP,
+                        onPressed: _isLoading ? null : _verifyOTP,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppConstants.successGreen,
                           padding: const EdgeInsets.symmetric(vertical: 16),

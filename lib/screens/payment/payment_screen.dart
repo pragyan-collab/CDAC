@@ -199,11 +199,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
         final isSelected = selectedMethod == method['id'];
 
         return GestureDetector(
-          onTap: () {
-            setState(() {
-              selectedMethod = method['id'];
-            });
-          },
+          onTap: _isProcessing
+              ? null
+              : () {
+                  setState(() {
+                    selectedMethod = method['id'];
+                  });
+                },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             margin: const EdgeInsets.only(bottom: 12),
@@ -260,29 +262,35 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const HeaderWidget(showBackButton: true),
-      body: _isProcessing
-          ? const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                  AppConstants.primaryBlue),
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Processing payment...',
-              style: TextStyle(
-                color: AppConstants.textMedium,
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-      )
-          : SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
+      body: SafeArea(
+        child: _isProcessing
+            ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          AppConstants.primaryBlue),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Processing payment...',
+                      style: TextStyle(
+                        color: AppConstants.textMedium,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  left: 24,
+                  right: 24,
+                  top: 24,
+                  bottom: MediaQuery.of(context).padding.bottom + 24,
+                ),
+                child: Column(
           crossAxisAlignment:
           CrossAxisAlignment.start,
           children: [
@@ -357,6 +365,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
           ],
         ),
+              ),
       ),
     );
   }

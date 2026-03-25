@@ -52,7 +52,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final aadhaar = _getFullAadhaar();
 
-    // Bypassed Validation for Demo
+    // Local kiosk auth validation (no backend).
+    if (!InputValidators.isValidAadhaar(aadhaar)) {
+      setState(() => _errorMessage = 'Enter a valid 12-digit Aadhaar number');
+      return;
+    }
 
 
     setState(() {
@@ -73,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
         arguments: {'aadhaar': aadhaar},
       );
     } else {
-      setState(() => _errorMessage = 'Invalid Aadhaar number');
+      setState(() => _errorMessage = 'Aadhaar not authorized for this kiosk');
     }
   }
 
@@ -250,7 +254,7 @@ class _LoginScreenState extends State<LoginScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _sendOTP,
+                  onPressed: _isLoading ? null : _sendOTP,
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
                     AppConstants.primaryBlue,

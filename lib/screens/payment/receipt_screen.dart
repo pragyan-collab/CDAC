@@ -5,6 +5,7 @@ import '../../utils/routes.dart';
 import '../../utils/argument_helper.dart';
 import '../../widgets/header_widget.dart';
 import '../../widgets/safe_navigation.dart';
+import '../../widgets/kiosk_busy_overlay.dart';
 
 class ReceiptScreen extends StatefulWidget {
   const ReceiptScreen({Key? key}) : super(key: key);
@@ -20,6 +21,20 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
   String applicationId = '';
 
   bool _argsLoaded = false;
+  bool _isBusy = false;
+
+  Future<void> _runBusyAction(Future<void> Function() action) async {
+    if (_isBusy) return;
+    setState(() => _isBusy = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) {
+        await Future.delayed(const Duration(milliseconds: 250));
+        if (mounted) setState(() => _isBusy = false);
+      }
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -43,12 +58,12 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
     }
   }
 
-  void _navigateToHome() {
-    SafeNavigation.navigateAndRemoveUntil(AppRoutes.home);
+  Future<void> _navigateToHome() async {
+    await SafeNavigation.navigateAndRemoveUntil(AppRoutes.home);
   }
 
-  void _navigateToStatus() {
-    SafeNavigation.navigateTo(AppRoutes.status);
+  Future<void> _navigateToStatus() async {
+    await SafeNavigation.navigateTo(AppRoutes.status);
   }
 
   @override
@@ -63,15 +78,18 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
 
     return Scaffold(
       appBar: const HeaderWidget(showBackButton: false),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(context).padding.bottom + 32,
-          ),
-          child: Column(
+      body: KioskBusyOverlay(
+        isBusy: _isBusy,
+        message: 'Please wait...',
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(context).padding.bottom + 32,
+            ),
+            child: Column(
           children: [
             Container(
               padding: const EdgeInsets.all(20),
@@ -217,14 +235,20 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Receipt downloaded'),
-                          backgroundColor: AppConstants.successGreen,
-                        ),
-                      );
-                    },
+                    onPressed: _isBusy
+                        ? null
+                        : () => _runBusyAction(() async {
+                              await Future.delayed(
+                                const Duration(milliseconds: 400),
+                              );
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Receipt downloaded'),
+                                  backgroundColor: AppConstants.successGreen,
+                                ),
+                              );
+                            }),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppConstants.primaryBlue,
                       side: const BorderSide(color: AppConstants.primaryBlue),
@@ -239,7 +263,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _navigateToHome,
+                    onPressed: _isBusy ? null : () => _runBusyAction(_navigateToHome),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppConstants.primaryBlue,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -256,7 +280,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
             const SizedBox(height: 16),
 
             TextButton(
-              onPressed: _navigateToStatus,
+              onPressed: _isBusy ? null : () => _runBusyAction(_navigateToStatus),
               child: const Text(
                 'Track Application Status',
                 style: TextStyle(
@@ -267,7 +291,8 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
               ),
             ),
           ],
-        ),
+            ),
+          ),
         ),
       ),
     );

@@ -8,6 +8,7 @@ class AppRoutes {
   // User Routes
   static const String home = '/home';
   static const String services = '/services';
+  static const String pay = '/pay';
   static const String apply = '/apply';
   static const String upload = '/upload';
   static const String status = '/status';

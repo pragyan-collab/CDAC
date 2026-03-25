@@ -7,6 +7,7 @@ import '../../services/data_service.dart';
 import '../../widgets/safe_navigation.dart';
 import '../../widgets/header_widget.dart';
 import '../../widgets/bottom_nav.dart';
+import '../../widgets/kiosk_busy_overlay.dart';
 import '../../widgets/status_card.dart';
 import '../../models/application_model.dart';
 
@@ -21,6 +22,7 @@ class _StatusScreenState extends State<StatusScreen> with TickerProviderStateMix
   int _currentIndex = 1;
   late TabController _tabController;
   final user = AuthService().currentUser;
+  bool _isBusy = false;
 
   List<ApplicationModel> allApplications = [];
   List<ApplicationModel> pendingApplications = [];
@@ -45,43 +47,61 @@ class _StatusScreenState extends State<StatusScreen> with TickerProviderStateMix
     });
   }
 
+  Future<void> _runBusyAction(Future<void> Function() action) async {
+    if (_isBusy) return;
+    setState(() => _isBusy = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) {
+        await Future.delayed(const Duration(milliseconds: 250));
+        if (mounted) setState(() => _isBusy = false);
+      }
+    }
+  }
+
   void _onBottomNavTap(int index) {
     if (index == _currentIndex) return;
+    if (_isBusy) return;
 
     setState(() => _currentIndex = index);
 
     switch (index) {
       case 0:
-        SafeNavigation.navigateReplacementTo(AppRoutes.home);
+        _runBusyAction(() => SafeNavigation.navigateReplacementTo(AppRoutes.home));
         break;
       case 1:
         break;
       case 2:
-        SafeNavigation.navigateReplacementTo(AppRoutes.schemesList);
+        _runBusyAction(() => SafeNavigation.navigateReplacementTo(AppRoutes.schemesList));
         break;
       case 3:
-        SafeNavigation.navigateReplacementTo(AppRoutes.newsList);
+        _runBusyAction(() => SafeNavigation.navigateReplacementTo(AppRoutes.newsList));
         break;
       case 4:
-        SafeNavigation.navigateReplacementTo(AppRoutes.about);
+        _runBusyAction(() => SafeNavigation.navigateReplacementTo(AppRoutes.about));
         break;
     }
   }
 
   void _navigateToPayment(ApplicationModel app) {
-    Navigator.pop(context);
-    SafeNavigation.navigateTo(
-      AppRoutes.payment,
-      arguments: {
-        'amount': app.amount,
-        'serviceName': app.serviceName,
-        'applicationId': app.id,
-      },
-    );
+    if (_isBusy) return;
+    _runBusyAction(() async {
+      Navigator.pop(context);
+      await SafeNavigation.navigateTo(
+        AppRoutes.payment,
+        arguments: {
+          'amount': app.amount,
+          'serviceName': app.serviceName,
+          'applicationId': app.id,
+        },
+      );
+    });
   }
 
   void _navigateToServices() {
-    SafeNavigation.navigateTo(AppRoutes.services);
+    if (_isBusy) return;
+    _runBusyAction(() => SafeNavigation.navigateTo(AppRoutes.services));
   }
 
   @override
@@ -110,14 +130,18 @@ class _StatusScreenState extends State<StatusScreen> with TickerProviderStateMix
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildApplicationList(allApplications),
-          _buildApplicationList(pendingApplications),
-          _buildApplicationList(approvedApplications),
-          _buildApplicationList(rejectedApplications),
-        ],
+      body: KioskBusyOverlay(
+        isBusy: _isBusy,
+        message: 'Loading...',
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildApplicationList(allApplications),
+            _buildApplicationList(pendingApplications),
+            _buildApplicationList(approvedApplications),
+            _buildApplicationList(rejectedApplications),
+          ],
+        ),
       ),
       bottomNavigationBar: BottomNavWidget(
         currentIndex: _currentIndex,
@@ -137,7 +161,7 @@ class _StatusScreenState extends State<StatusScreen> with TickerProviderStateMix
             const Text('No applications found', style: TextStyle(fontSize: 16)),
             const SizedBox(height: 8),
             ElevatedButton(
-              onPressed: _navigateToServices,
+              onPressed: _isBusy ? null : _navigateToServices,
               child: const Text('Apply for Service'),
             ),
           ],
@@ -176,7 +200,7 @@ class _StatusScreenState extends State<StatusScreen> with TickerProviderStateMix
             if (app.status == ApplicationStatus.paymentPending) ...[
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () => _navigateToPayment(app),
+                onPressed: _isBusy ? null : () => _navigateToPayment(app),
                 child: const Text('Complete Payment'),
               ),
             ],

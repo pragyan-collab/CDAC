@@ -12,6 +12,7 @@ import 'screens/auth/otp_screen.dart';
 // User Screens
 import 'screens/user/home_screen.dart';
 import 'screens/user/services_screen.dart';
+import 'screens/user/pay_screen.dart';
 import 'screens/user/apply_screen.dart';
 import 'screens/user/upload_screen.dart';
 import 'screens/user/status_screen.dart';
@@ -38,6 +39,7 @@ import 'utils/routes.dart';
 import 'utils/language_utils.dart';
 import 'utils/error_handler.dart';
 import 'services/data_service.dart';
+import 'services/auth_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,6 +70,7 @@ class _CivicKioskAppState extends State<CivicKioskApp> {
 
   Future<void> _initializeApp() async {
     await _languageUtils.getLanguage();
+    await AuthService().restoreSession();
     if (mounted) {
       setState(() => _isLoading = false);
     }
@@ -97,6 +100,21 @@ class _CivicKioskAppState extends State<CivicKioskApp> {
   }
 
   Route<dynamic>? _generateRoute(RouteSettings settings) {
+    const publicRoutes = {
+      AppRoutes.splash,
+      AppRoutes.language,
+      AppRoutes.login,
+      AppRoutes.otp,
+    };
+
+    final routeName = settings.name;
+    final isAuthorized = AuthService().currentUser != null;
+    if (routeName != null &&
+        !publicRoutes.contains(routeName) &&
+        !isAuthorized) {
+      return MaterialPageRoute(builder: (_) => const LoginScreen());
+    }
+
     switch (settings.name) {
     // Auth Routes
       case AppRoutes.splash:
@@ -116,6 +134,8 @@ class _CivicKioskAppState extends State<CivicKioskApp> {
         return MaterialPageRoute(builder: (_) => const HomeScreen());
       case AppRoutes.services:
         return MaterialPageRoute(builder: (_) => const ServicesScreen());
+      case AppRoutes.pay:
+        return MaterialPageRoute(builder: (_) => const PayScreen());
       case AppRoutes.apply:
         return MaterialPageRoute(
           builder: (_) => const ApplyScreen(),

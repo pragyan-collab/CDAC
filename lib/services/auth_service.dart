@@ -1,8 +1,6 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
-import 'api_service.dart';
+import '../utils/input_validators.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -11,66 +9,83 @@ class AuthService {
 
   UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
-  
+
   String? _lastAadhaar;
-  
-  final String _baseUrl = 'http://10.0.2.2:8000/api/auth';
+
+  // Kiosk mock auth configuration
+  static const String _authorizedAadhaar = '123456789012';
+  static const String _authorizedName = 'Abhishek Nanda';
+
+  // Keep existing token key names so existing logout code still works.
+  static const String _prefsAccessTokenKey = 'access_token';
+  static const String _prefsRefreshTokenKey = 'refresh_token';
+  static const String _prefsAuthorizedAadhaarKey = 'authorized_aadhaar';
 
   Future<bool> sendOTP(String aadhaarNumber) async {
-    try {
-      // Use real backend validation to check if Aadhaar exists
-      _lastAadhaar = aadhaarNumber;
-      final response = await http.post(
-        Uri.parse('$_baseUrl/login/'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'aadhaar_number': aadhaarNumber}),
-      );
-      if (response.statusCode == 200) {
-        return true; // Aadhaar exists, proceed to OTP screen
-      }
-      return false; // Aadhaar not found
-    } catch (e) {
-      return false; // Network error or invalid
-    }
+    _lastAadhaar = aadhaarNumber.replaceAll(' ', '');
+    // In kiosk mode: Aadhaar-only auth. OTP is validated later.
+    return _lastAadhaar == _authorizedAadhaar;
   }
 
   Future<UserModel?> verifyOTP(String otp) async {
-    try {
-      // OTP is simulated as success, now fetch the real user data
-      final response = await http.post(
-        Uri.parse('$_baseUrl/login/'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'aadhaar_number': _lastAadhaar}),
-      );
+    final normalizedOtp = otp.replaceAll(' ', '');
+    final aadhaar = _lastAadhaar?.replaceAll(' ', '');
 
-      if (response.statusCode == 200) {
-        final prefs = await SharedPreferences.getInstance();
-        final data = jsonDecode(response.body);
-        await prefs.setString('access_token', data['access']);
-        await prefs.setString('refresh_token', data['refresh']);
-        
-        _currentUser = UserModel(
-          aadhaarNumber: _lastAadhaar ?? '',
-          name: data['name'] ?? 'Demo User',
-          email: '',
-          phone: '',
-        );
-        return _currentUser;
-      }
+    // OTP rule per requirement: accept any valid 6-digit OTP
+    // but only if Aadhaar is the authorized kiosk Aadhaar.
+    if (aadhaar != _authorizedAadhaar || !InputValidators.isValidOtp(normalizedOtp)) {
       return null;
-    } catch (e) { 
-      return null; 
     }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsAccessTokenKey, 'mock_access_token');
+    await prefs.setString(_prefsRefreshTokenKey, 'mock_refresh_token');
+    await prefs.setString(_prefsAuthorizedAadhaarKey, _authorizedAadhaar);
+
+    _currentUser = UserModel(
+      aadhaarNumber: _authorizedAadhaar,
+      name: _authorizedName,
+      email: '',
+      phone: '',
+    );
+    return _currentUser;
   }
 
   Future<bool> adminLogin(String username, String password) async { 
-    return true; // Demo bypass
+    // Kiosk behavior: only allow admin screens when kiosk auth succeeded.
+    // Username/password are not validated in this local mock.
+    return _currentUser != null;
   }
 
   Future<void> logout() async {
     _currentUser = null;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('access_token');
-    await prefs.remove('refresh_token');
+    await prefs.remove(_prefsAccessTokenKey);
+    await prefs.remove(_prefsRefreshTokenKey);
+    await prefs.remove(_prefsAuthorizedAadhaarKey);
+    _lastAadhaar = null;
+  }
+
+  /// Restore kiosk session from SharedPreferences on app startup.
+  /// Ensures route protection can work synchronously after initialization.
+  Future<void> restoreSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final accessToken = prefs.getString(_prefsAccessTokenKey);
+    final storedAadhaar = prefs.getString(_prefsAuthorizedAadhaarKey);
+
+    final isValidSession = accessToken != null &&
+        accessToken.isNotEmpty &&
+        storedAadhaar == _authorizedAadhaar;
+
+    if (isValidSession) {
+      _currentUser = UserModel(
+        aadhaarNumber: _authorizedAadhaar,
+        name: _authorizedName,
+        email: '',
+        phone: '',
+      );
+    } else {
+      _currentUser = null;
+    }
   }
 }

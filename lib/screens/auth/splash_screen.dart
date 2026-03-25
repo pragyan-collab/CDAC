@@ -1,7 +1,7 @@
 // lib/screens/auth/splash_screen.dart
 import 'package:flutter/material.dart';
+import '../../utils/constants.dart';
 import '../../utils/routes.dart';
-import '../../utils/language_utils.dart';
 import '../../widgets/safe_navigation.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -41,7 +41,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'Civic Kiosk',
+              AppStrings.appName,
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,

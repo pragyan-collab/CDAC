@@ -9,8 +9,7 @@ class ApiService {
   factory ApiService() => _instance;
   ApiService._internal();
 
-  // ✅ Use your PC IP (IMPORTANT)
-  final String baseUrl = 'http://192.168.1.15:8000/api';
+  final String baseUrl = 'http://10.0.2.2:8000/api'; // Android Emulator alias over localhost
 
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -24,15 +23,7 @@ class ApiService {
   List<SchemeModel> getSchemes() {
     return [
       SchemeModel(
-        id: 'SCM001',
-        title: 'PM Awas Yojana',
-        description: 'Housing',
-        eligibility: '',
-        benefits: '',
-        documents: '',
-        applicationProcess: '',
-        department: 'Ministry',
-        lastDate: DateTime.now(),
+        id: 'SCM001', title: 'PM Awas Yojana', description: 'Housing', eligibility: '', benefits: '', documents: '', applicationProcess: '', department: 'Ministry', lastDate: DateTime.now(),
       )
     ];
   }
@@ -40,21 +31,16 @@ class ApiService {
   Future<String> sendChatMessage(String message, String lang) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/chatbot/'), // ✅ FIXED interpolation
+        Uri.parse('\$baseUrl/chatbot/'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          "message": message,
-          "language": lang,
-        }),
+        body: jsonEncode({"message": message, "language": lang}),
       );
-
       if (response.statusCode == 200) {
         return jsonDecode(response.body)['reply'];
-      } else {
-        return "Server Error: ${response.statusCode}";
       }
+      return "Network Error Responses.";
     } catch (e) {
-      return "Connection Failed: $e";
+      return "Connection Failed.";
     }
   }
 }

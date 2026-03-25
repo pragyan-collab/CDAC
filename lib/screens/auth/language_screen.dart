@@ -4,6 +4,7 @@ import '../../utils/constants.dart';
 import '../../utils/routes.dart';
 import '../../utils/language_utils.dart';
 import '../../widgets/safe_navigation.dart';
+import '../../services/auth_service.dart';
 
 class LanguageScreen extends StatelessWidget {
   const LanguageScreen({Key? key}) : super(key: key);
@@ -12,8 +13,10 @@ class LanguageScreen extends StatelessWidget {
     await LanguageUtils().setLanguage(code);
 
     if (context.mounted) {
-      // ✅ FIXED (removed context)
-      SafeNavigation.navigateReplacementTo(AppRoutes.login);
+      final isAuthorized = AuthService().currentUser != null;
+      SafeNavigation.navigateReplacementTo(
+        isAuthorized ? AppRoutes.home : AppRoutes.login,
+      );
     }
   }
 

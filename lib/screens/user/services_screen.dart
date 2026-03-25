@@ -6,6 +6,9 @@ import '../../utils/routes.dart';
 import '../../widgets/safe_navigation.dart';
 import '../../widgets/header_widget.dart';
 import '../../widgets/bottom_nav.dart';
+import '../../widgets/kiosk_busy_overlay.dart';
+import '../../widgets/skeleton/kiosk_skeleton_card.dart';
+import '../../widgets/skeleton/kiosk_skeleton_list.dart';
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({Key? key}) : super(key: key);
@@ -17,6 +20,7 @@ class ServicesScreen extends StatefulWidget {
 class _ServicesScreenState extends State<ServicesScreen> {
   int _currentIndex = 1;
   bool _isLoading = true;
+  bool _isBusy = false;
   List<dynamic> _services = [];
 
   @override
@@ -57,42 +61,45 @@ class _ServicesScreenState extends State<ServicesScreen> {
     }
   }
 
+  Future<void> _runBusyNavigation(Future<void> Function() action) async {
+    if (_isBusy) return;
+    setState(() => _isBusy = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) {
+        await Future.delayed(const Duration(milliseconds: 250));
+        if (mounted) setState(() => _isBusy = false);
+      }
+    }
+  }
+
   void _onBottomNavTap(int index) {
     if (index == _currentIndex) return;
+    if (_isBusy) return;
 
     setState(() => _currentIndex = index);
 
     switch (index) {
       case 0:
-        SafeNavigation.navigateReplacementTo(AppRoutes.home);
+        _runBusyNavigation(
+            () => SafeNavigation.navigateReplacementTo(AppRoutes.home));
         break;
       case 1:
         break;
       case 2:
-        SafeNavigation.navigateReplacementTo(AppRoutes.schemesList);
+        _runBusyNavigation(() => SafeNavigation.navigateReplacementTo(
+            AppRoutes.schemesList));
         break;
       case 3:
-        SafeNavigation.navigateReplacementTo(AppRoutes.newsList);
+        _runBusyNavigation(
+            () => SafeNavigation.navigateReplacementTo(AppRoutes.newsList));
         break;
       case 4:
-        SafeNavigation.navigateReplacementTo(AppRoutes.about);
+        _runBusyNavigation(
+            () => SafeNavigation.navigateReplacementTo(AppRoutes.about));
         break;
     }
-  }
-
-  void _navigateToPayment(dynamic service) {
-    double amount =
-        double.tryParse(service['base_price']?.toString() ?? '0') ?? 0.0;
-
-    SafeNavigation.navigateTo(
-      AppRoutes.payment,
-      arguments: {
-        'serviceName': service['name'] ?? 'Service',
-        'amount': amount,
-        'applicationId':
-        'APP_${DateTime.now().millisecondsSinceEpoch}',
-      },
-    );
   }
 
   IconData _getIcon(String iconName) {
@@ -152,28 +159,20 @@ class _ServicesScreenState extends State<ServicesScreen> {
             ),
           ),
         ),
-        trailing: ElevatedButton(
-          onPressed: price > 0
-              ? () => _navigateToPayment(service)
-              : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppConstants.primaryBlue,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          child: const Text(
-            'Pay Now',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
+        trailing: const SizedBox.shrink(),
       ),
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: KioskSkeletonList(
+          itemCount: 6,
+          itemBuilder: (context, index) => const KioskSkeletonServiceCard(),
+        ),
+      );
     }
 
     if (_services.isEmpty) {
@@ -198,23 +197,38 @@ class _ServicesScreenState extends State<ServicesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const HeaderWidget(showBackButton: false),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            width: double.infinity,
-            color: AppConstants.pageBg,
-            child: const Text(
-              'Select a Service to Pay',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppConstants.textDark,
+      body: SafeArea(
+        child: KioskBusyOverlay(
+          isBusy: _isBusy,
+          message: 'Loading...',
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                width: double.infinity,
+                color: AppConstants.pageBg,
+                child: const Text(
+                  'Services',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppConstants.textDark,
+                  ),
+                ),
               ),
-            ),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).padding.bottom +
+                        kBottomNavigationBarHeight +
+                        8,
+                  ),
+                  child: _buildBody(),
+                ),
+              ),
+            ],
           ),
-          Expanded(child: _buildBody()),
-        ],
+        ),
       ),
       bottomNavigationBar: BottomNavWidget(
         currentIndex: _currentIndex,
